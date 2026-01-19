@@ -2,6 +2,11 @@
 // process_booking.php
 session_start();
 require 'db_config.php';
+require 'security.php';
+require 'notifications.php';
+
+// Set security headers
+setSecurityHeaders();
 
 // 1. SECURITY: Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -32,13 +37,55 @@ if (empty($stripe_secret)) { die("Stripe is not configured in Admin Settings.");
 $session_id = $_POST['session_id'];
 $user_code  = isset($_POST['discount_code']) ? strtoupper(trim($_POST['discount_code'])) : '';
 $user_id    = $_SESSION['user_id'];
+$user_role  = $_SESSION['user_role'] ?? 'athlete';
 $domain     = "http://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']); 
+
+// Handle multi-athlete booking for parents
+$athlete_ids = [];
+$is_parent_booking = false;
+
+if ($user_role === 'parent' && isset($_POST['athlete_ids']) && is_array($_POST['athlete_ids'])) {
+    $is_parent_booking = true;
+    $athlete_ids = array_map('intval', $_POST['athlete_ids']);
+    
+    // Validate that parent manages these athletes
+    if (!empty($athlete_ids)) {
+        $placeholders = str_repeat('?,', count($athlete_ids) - 1) . '?';
+        $verify_stmt = $pdo->prepare("
+            SELECT athlete_id FROM managed_athletes 
+            WHERE parent_id = ? AND athlete_id IN ($placeholders) AND can_book = 1
+        ");
+        $verify_params = array_merge([$user_id], $athlete_ids);
+        $verify_stmt->execute($verify_params);
+        $verified_athletes = $verify_stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Only use verified athletes
+        $athlete_ids = array_intersect($athlete_ids, $verified_athletes);
+    }
+    
+    if (empty($athlete_ids)) {
+        die("No valid athletes selected for booking.");
+    }
+} else {
+    // Single athlete booking (the logged-in user)
+    $athlete_ids = [$user_id];
+}
 
 // Fetch Session Info
 $stmt = $pdo->prepare("SELECT * FROM sessions WHERE id = ?");
 $stmt->execute([$session_id]);
 $session = $stmt->fetch();
 if (!$session) { die("Session not found."); }
+
+// Check capacity for multiple bookings
+$current_bookings_stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE session_id = ? AND status = 'paid'");
+$current_bookings_stmt->execute([$session_id]);
+$current_bookings = $current_bookings_stmt->fetchColumn();
+$available_spots = $session['max_capacity'] - $current_bookings;
+
+if (count($athlete_ids) > $available_spots) {
+    die("Not enough spots available. Only $available_spots spot(s) remaining.");
+}
 
 // 5. CALCULATE PRICE (Discount Logic)
 $original_price = $session['price'];
@@ -70,27 +117,33 @@ if (!empty($user_code)) {
     }
 }
 
-// Calculate tax
+// Calculate tax and total (multiply by number of athletes)
+$num_athletes = count($athlete_ids);
 $tax_amount = $final_price * ($tax_rate / 100);
-$total_with_tax = $final_price + $tax_amount;
+$total_per_athlete = $final_price + $tax_amount;
+$total_with_tax = $total_per_athlete * $num_athletes;
 
 // 6. CREATE STRIPE SESSION
 try {
     $description = $applied_code ? "Discount '$applied_code' applied" : 'Regular Rate';
     $description .= " + $tax_name ($tax_rate%)";
     
+    if ($num_athletes > 1) {
+        $description .= " | Booking for $num_athletes athletes";
+    }
+    
     $checkout_session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card'],
         'line_items' => [[
             'price_data' => [
                 'currency' => $currency,
-                'unit_amount' => round($total_with_tax * 100), // Convert to cents (includes tax)
+                'unit_amount' => round($total_per_athlete * 100), // Convert to cents (includes tax)
                 'product_data' => [
                     'name' => 'Training Session: ' . $session['title'],
                     'description' => $description,
                 ],
             ],
-            'quantity' => 1,
+            'quantity' => $num_athletes,
         ]],
         'mode' => 'payment',
         'success_url' => $domain . '/payment_success.php?session_id={CHECKOUT_SESSION_ID}',
@@ -98,16 +151,42 @@ try {
         'client_reference_id' => $user_id,
     ]);
 
-    // 7. SAVE PENDING BOOKING IN DB (with tax amount)
-    $stmt = $pdo->prepare("INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, tax_amount, discount_code, status) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
-    $stmt->execute([$user_id, $session_id, $checkout_session->id, $total_with_tax, $original_price, $tax_amount, $applied_code]);
+    // 7. SAVE PENDING BOOKINGS IN DB (one for each athlete)
+    // Store metadata to connect all bookings from this transaction
+    $stripe_session_id = $checkout_session->id;
+    
+    foreach ($athlete_ids as $athlete_id) {
+        $stmt = $pdo->prepare("
+            INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, tax_amount, discount_code, booked_for_user_id, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        ");
+        
+        // user_id is who made the booking (parent or athlete themselves)
+        // booked_for_user_id is who the booking is for (the athlete)
+        $booked_for = ($is_parent_booking) ? $athlete_id : null;
+        
+        $stmt->execute([
+            $user_id,           // Who made the booking
+            $session_id,
+            $stripe_session_id,
+            $total_per_athlete, // Amount per athlete
+            $original_price,
+            $tax_amount,
+            $applied_code,
+            $booked_for,        // Who it's booked for (null if booking for self)
+            
+        ]);
+        
+        // Log security event
+        logSecurityEvent($pdo, 'booking_created', "User $user_id created pending booking for athlete $athlete_id, session $session_id", $user_id);
+    }
 
     // Redirect user to Stripe
     header("Location: " . $checkout_session->url);
     exit();
 
 } catch (Exception $e) {
+    error_log("Stripe Error in process_booking.php: " . $e->getMessage());
     die("Stripe Error: " . $e->getMessage());
 }
 ?>

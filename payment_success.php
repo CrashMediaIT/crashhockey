@@ -3,6 +3,7 @@
 session_start();
 require 'db_config.php';
 require 'mailer.php';
+require 'notifications.php';
 
 // 1. LOAD STRIPE
 if (file_exists('vendor/autoload.php')) { require 'vendor/autoload.php'; } 
@@ -21,35 +22,70 @@ try {
 
     if ($checkout->payment_status == 'paid') {
         
-        // 4. FIND THE PENDING BOOKING
+        // 4. FIND ALL PENDING BOOKINGS WITH THIS STRIPE SESSION (for multi-athlete bookings)
         $stmt = $pdo->prepare("
-            SELECT b.*, s.title, s.date, s.time, u.email, u.first_name 
+            SELECT b.*, s.title, s.session_date, s.session_time, u.email, u.first_name,
+                   athlete.first_name as athlete_first_name, athlete.last_name as athlete_last_name,
+                   athlete.email as athlete_email
             FROM bookings b
             JOIN sessions s ON b.session_id = s.id
             JOIN users u ON b.user_id = u.id
-            WHERE b.stripe_session_id = ?
+            LEFT JOIN users athlete ON b.booked_for_user_id = athlete.id
+            WHERE b.stripe_session_id = ? AND b.status = 'pending'
         ");
         $stmt->execute([$stripe_sid]);
-        $booking = $stmt->fetch();
+        $bookings = $stmt->fetchAll();
 
-        // Only process if it hasn't been processed yet
-        if ($booking && $booking['status'] == 'pending') {
+        // Only process if bookings haven't been processed yet
+        if (!empty($bookings)) {
             
-            // 5. MARK AS PAID IN DB
-            $pdo->prepare("UPDATE bookings SET status = 'paid' WHERE id = ?")->execute([$booking['id']]);
+            foreach ($bookings as $booking) {
+                // 5. MARK AS PAID IN DB
+                $pdo->prepare("UPDATE bookings SET status = 'paid' WHERE id = ?")->execute([$booking['id']]);
 
-            // 6. SEND EMAIL RECEIPT
-            $session_date = date('M j, Y', strtotime($booking['date']));
-            
-            sendEmail($booking['email'], 'payment_receipt', [
-                'session_title' => $booking['title'],
-                'amount'        => number_format($booking['amount_paid'], 2),
-                'date'          => $session_date,
-                'trans_id'      => $stripe_sid
-            ]);
+                // 6. SEND EMAIL RECEIPT
+                $session_date = date('M j, Y', strtotime($booking['session_date']));
+                $session_time = date('g:i A', strtotime($booking['session_time']));
+                
+                // Determine recipient (athlete if booked by parent, or booker themselves)
+                $recipient_email = $booking['athlete_email'] ?: $booking['email'];
+                $recipient_name = $booking['athlete_first_name'] ? 
+                    $booking['athlete_first_name'] . ' ' . $booking['athlete_last_name'] : 
+                    $booking['first_name'];
+                
+                sendEmail($recipient_email, 'payment_receipt', [
+                    'name'          => $recipient_name,
+                    'session_title' => $booking['title'],
+                    'amount'        => number_format($booking['amount_paid'], 2),
+                    'date'          => $session_date,
+                    'time'          => $session_time,
+                    'trans_id'      => $stripe_sid
+                ]);
+                
+                // 7. CREATE NOTIFICATION FOR ATHLETE
+                $notify_user_id = $booking['booked_for_user_id'] ?: $booking['user_id'];
+                $booker_name = $booking['athlete_first_name'] ? 
+                    $booking['first_name'] : // Parent's name
+                    'You';
+                
+                $notification_msg = $booking['booked_for_user_id'] ? 
+                    "Booked by $booker_name for " . $booking['title'] . " on $session_date at $session_time" :
+                    "Successfully booked " . $booking['title'] . " on $session_date at $session_time";
+                
+                createNotification(
+                    $pdo,
+                    $notify_user_id,
+                    'booking',
+                    'Session Booking Confirmed',
+                    $notification_msg,
+                    'dashboard.php?page=session_detail&id=' . $booking['session_id'],
+                    false // Email already sent
+                );
+            }
         }
     }
 } catch (Exception $e) {
+    error_log("Payment verification error: " . $e->getMessage());
     die("Payment Verification Failed: " . $e->getMessage());
 }
 ?>

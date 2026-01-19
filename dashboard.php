@@ -20,12 +20,13 @@ $user_name = $_SESSION['user_name'] ?? 'Guest';
 
 $isAdmin   = ($user_role === 'admin');
 $isCoach   = ($user_role === 'coach' || $user_role === 'coach_plus');
+$isParent  = ($user_role === 'parent');
 
 $page = $_GET['page'] ?? 'home';
 
 // FULL ROUTING TABLE
 $allowed_pages = [
-    'home'                => 'views/home.php',
+    'home'                => $isParent ? 'views/parent_home.php' : 'views/home.php',
     'stats'               => 'views/stats.php',
     'schedule'            => 'views/schedule.php',
     'session_history'     => 'views/session_history.php',
@@ -48,7 +49,8 @@ $allowed_pages = [
     'admin_session_types' => 'views/admin_session_types.php',
     'admin_discounts'     => 'views/admin_discounts.php',
     'admin_permissions'   => 'views/admin_permissions.php',
-    'settings'            => 'views/settings.php'
+    'settings'            => 'views/settings.php',
+    'manage_athletes'     => 'views/manage_athletes.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
@@ -180,6 +182,15 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=payment_history" class="nav-link <?= $page=='payment_history'?'active':'' ?>"><i class="fa-solid fa-credit-card"></i> Payment History</a>
         </nav>
     </div>
+
+    <?php if($isParent): ?>
+    <div class="nav-group">
+        <span class="nav-label">Parent Management</span>
+        <nav class="nav-menu">
+            <a href="?page=manage_athletes" class="nav-link <?= $page=='manage_athletes'?'active':'' ?>"><i class="fa-solid fa-user-plus"></i> Manage Athletes</a>
+        </nav>
+    </div>
+    <?php endif; ?>
 
     <?php if($isCoach || $isAdmin): ?>
     <div class="nav-group">
