@@ -16,7 +16,8 @@ if (file_exists($lock_file)) {
 
 $error = '';
 $success = false;
-$step = isset($_POST['step']) ? $_POST['step'] : 1;
+$admin_created = false;
+$step = isset($_POST['step']) ? intval($_POST['step']) : 1;
 
 // Step 1: Collect database credentials
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 1) {
@@ -134,14 +135,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                         }
                     }
                     
-                    // Create lock file to prevent re-running
-                    file_put_contents($lock_file, date('Y-m-d H:i:s'));
-                    
-                    $success = true;
+                    // Don't create lock file yet - wait for admin creation
+                    $step = 3; // Move to admin creation step
                 }
                 
             } catch (PDOException $e) {
                 $error = 'Database initialization failed: ' . $e->getMessage();
+            }
+        }
+    }
+}
+
+// Step 3: Create first admin account
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
+    // Read credentials from config file
+    if (!file_exists($config_file)) {
+        $error = 'Configuration file not found. Please start setup from the beginning.';
+    } else {
+        $first_name = trim($_POST['first_name'] ?? '');
+        $last_name = trim($_POST['last_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+        
+        if (empty($first_name) || empty($last_name) || empty($email) || empty($password)) {
+            $error = 'All fields are required.';
+        } elseif ($password !== $confirm_password) {
+            $error = 'Passwords do not match.';
+        } elseif (strlen($password) < 8) {
+            $error = 'Password must be at least 8 characters long.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Invalid email address.';
+        } else {
+            // Read DB credentials
+            $env_data = file_get_contents($config_file);
+            preg_match('/DB_HOST=(.+)/', $env_data, $host_match);
+            preg_match('/DB_NAME=(.+)/', $env_data, $name_match);
+            preg_match('/DB_USER=(.+)/', $env_data, $user_match);
+            preg_match('/DB_PASS_ENCRYPTED=(.+)/', $env_data, $pass_match);
+            preg_match('/ENCRYPTION_KEY_HASH=(.+)/', $env_data, $key_match);
+            
+            if ($host_match && $name_match && $user_match) {
+                $db_host = trim($host_match[1]);
+                $db_name = trim($name_match[1]);
+                $db_user = trim($user_match[1]);
+                
+                // Decrypt password
+                if ($pass_match && $key_match) {
+                    try {
+                        $encrypted_data = trim($pass_match[1]);
+                        $key_hash = hex2bin(trim($key_match[1]));
+                        
+                        $parts = explode('::', base64_decode($encrypted_data), 2);
+                        if (count($parts) === 2) {
+                            $iv = $parts[0];
+                            $encrypted = $parts[1];
+                            $db_pass = openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
+                        }
+                    } catch (Exception $e) {
+                        $db_pass = '';
+                    }
+                } else {
+                    $db_pass = '';
+                }
+                
+                try {
+                    $pdo = new PDO(
+                        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+                        $db_user,
+                        $db_pass
+                    );
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Create admin account
+                    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+                    $stmt = $pdo->prepare("
+                        INSERT INTO users (first_name, last_name, email, password, role, is_verified, email_notifications)
+                        VALUES (?, ?, ?, ?, 'admin', 1, 1)
+                    ");
+                    $stmt->execute([$first_name, $last_name, $email, $hashed_password]);
+                    
+                    // Create lock file now
+                    file_put_contents($lock_file, date('Y-m-d H:i:s'));
+                    
+                    $admin_created = true;
+                    $success = true;
+                    
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000) {
+                        $error = 'An account with this email already exists.';
+                    } else {
+                        $error = 'Failed to create admin account: ' . $e->getMessage();
+                    }
+                }
+            } else {
+                $error = 'Invalid configuration file.';
             }
         }
     }
@@ -331,6 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
             <div class="step-indicator">
                 <div class="step <?= $step >= 1 ? 'active' : '' ?>">1</div>
                 <div class="step <?= $step >= 2 ? 'active' : '' ?>">2</div>
+                <div class="step <?= $step >= 3 ? 'active' : '' ?>">3</div>
             </div>
 
             <?php if ($error): ?>
@@ -392,17 +481,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                         <i class="fas fa-database"></i> Initialize Database
                     </button>
                 </form>
+            <?php elseif ($step == 3): ?>
+                <h2>Create Admin Account</h2>
+                <p style="color: #94a3b8; margin-bottom: 20px; line-height: 1.6;">
+                    Create your first administrator account to manage the system.
+                </p>
+                
+                <form method="POST">
+                    <input type="hidden" name="step" value="3">
+                    
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" name="email" required>
+                        <div class="help-text">You'll use this to log in</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" required minlength="8">
+                        <div class="help-text">At least 8 characters</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" name="confirm_password" required minlength="8">
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-user-shield"></i> Create Admin Account
+                    </button>
+                </form>
             <?php endif; ?>
         <?php else: ?>
             <div class="success-card">
                 <i class="fas fa-check-circle"></i>
                 <h2>Setup Complete!</h2>
                 <p>
-                    Your database has been successfully configured and initialized. 
-                    You can now proceed to the registration page to create your admin account.
+                    Your admin account has been created successfully. 
+                    You can now log in to access the dashboard.
                 </p>
-                <a href="register.php">
-                    <i class="fas fa-user-plus"></i> Create Admin Account
+                <a href="login.php">
+                    <i class="fas fa-sign-in-alt"></i> Go to Login
                 </a>
             </div>
         <?php endif; ?>

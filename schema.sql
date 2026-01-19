@@ -15,12 +15,16 @@ CREATE TABLE IF NOT EXISTS `users` (
   `birth_date` DATE DEFAULT NULL,
   `primary_arena` VARCHAR(255) DEFAULT NULL,
   `profile_pic` VARCHAR(255) DEFAULT NULL,
+  `assigned_coach_id` INT DEFAULT NULL,
+  `email_notifications` TINYINT(1) DEFAULT 1,
   `is_verified` TINYINT(1) DEFAULT 0,
   `verification_code` VARCHAR(10) DEFAULT NULL,
   `force_pass_change` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`assigned_coach_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_email` (`email`),
-  INDEX `idx_role` (`role`)
+  INDEX `idx_role` (`role`),
+  INDEX `idx_coach` (`assigned_coach_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Locations
@@ -47,12 +51,15 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   `session_date` DATE NOT NULL,
   `session_time` TIME NOT NULL,
   `session_plan` TEXT,
+  `practice_plan_id` INT DEFAULT NULL,
   `arena` VARCHAR(255) NOT NULL,
   `city` VARCHAR(100) NOT NULL,
   `price` DECIMAL(10,2) DEFAULT 0.00,
   `max_capacity` INT DEFAULT 20,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX `idx_date` (`session_date`)
+  FOREIGN KEY (`practice_plan_id`) REFERENCES `practice_plans`(`id`) ON DELETE SET NULL,
+  INDEX `idx_date` (`session_date`),
+  INDEX `idx_practice_plan` (`practice_plan_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bookings
@@ -191,9 +198,12 @@ CREATE TABLE IF NOT EXISTS `videos` (
   `description` TEXT,
   `video_type` VARCHAR(50) DEFAULT NULL,
   `file_path` VARCHAR(500) NOT NULL,
+  `review_requested` TINYINT(1) DEFAULT 0,
+  `reviewed` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`uploader_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  INDEX `idx_assigned` (`assigned_to_user_id`)
+  INDEX `idx_assigned` (`assigned_to_user_id`),
+  INDEX `idx_review` (`review_requested`, `reviewed`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Athlete Teams
@@ -320,6 +330,33 @@ CREATE TABLE IF NOT EXISTS `security_logs` (
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_event_type` (`event_type`),
   INDEX `idx_user` (`user_id`),
+  INDEX `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Video Notes
+CREATE TABLE IF NOT EXISTS `video_notes` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `video_id` INT NOT NULL,
+  `coach_id` INT NOT NULL,
+  `note_content` TEXT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`video_id`) REFERENCES `videos`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`coach_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_video` (`video_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `type` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `link` VARCHAR(500) DEFAULT NULL,
+  `read_status` TINYINT(1) DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user_read` (`user_id`, `read_status`),
   INDEX `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
