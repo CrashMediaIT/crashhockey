@@ -32,12 +32,15 @@ $allowed_pages = [
     'nutrition_builder'   => 'views/nutrition.php',
     'library_workouts'    => 'views/library_workouts.php',
     'library_nutrition'   => 'views/library_nutrition.php',
+    'drills'              => 'views/drills.php',
+    'practice_plans'      => 'views/practice_plans.php',
     'athletes'            => 'views/athletes.php',
     'create_session'      => 'views/create_session.php',
     'session_templates'   => 'views/library_sessions.php',
     'admin_locations'     => 'views/admin_locations.php',
     'admin_session_types' => 'views/admin_session_types.php',
     'admin_discounts'     => 'views/admin_discounts.php',
+    'admin_permissions'   => 'views/admin_permissions.php',
     'settings'            => 'views/settings.php'
 ];
 
@@ -86,6 +89,8 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=workout_builder" class="nav-link <?= $page=='workout_builder'?'active':'' ?>"><i class="fa-solid fa-dumbbell"></i> Workout Plans</a>
             <a href="?page=nutrition_builder" class="nav-link <?= $page=='nutrition_builder'?'active':'' ?>"><i class="fa-solid fa-apple-whole"></i> Nutrition Plans</a>
             <a href="?page=video_library" class="nav-link <?= $page=='video_library'?'active':'' ?>"><i class="fa-solid fa-video"></i> Video Drills</a>
+            <a href="?page=drills" class="nav-link <?= $page=='drills'?'active':'' ?>"><i class="fa-solid fa-hockey-puck"></i> Drill Library</a>
+            <a href="?page=practice_plans" class="nav-link <?= $page=='practice_plans'?'active':'' ?>"><i class="fa-solid fa-clipboard-list"></i> Practice Plans</a>
         </nav>
     </div>
 
@@ -117,6 +122,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_locations" class="nav-link <?= $page=='admin_locations'?'active':'' ?>"><i class="fa-solid fa-map-location-dot"></i> Locations</a>
             <a href="?page=admin_session_types" class="nav-link <?= $page=='admin_session_types'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Session Types</a>
             <a href="?page=admin_discounts" class="nav-link <?= $page=='admin_discounts'?'active':'' ?>"><i class="fa-solid fa-percent"></i> Discounts</a>
+            <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
         </nav>
     </div>
