@@ -60,6 +60,9 @@ $categories = $pdo->query("SELECT * FROM drill_categories ORDER BY name")->fetch
 ?>
 
 <style>
+    :root {
+        --primary: #ff4d00;
+    }
     .page-header {
         display: flex;
         justify-content: space-between;
