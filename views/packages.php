@@ -137,7 +137,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
                     
                     <div class="package-footer">
                         <form action="process_purchase_package.php" method="POST">
-                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
                             <input type="hidden" name="package_id" value="<?php echo $package['id']; ?>">
                             
                             <?php if ($user_role === 'parent'): ?>
