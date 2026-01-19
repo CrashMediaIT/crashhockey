@@ -17,6 +17,7 @@ if (file_exists($lock_file)) {
 $error = '';
 $success = false;
 $admin_created = false;
+$smtp_tested = false;
 $step = isset($_POST['step']) ? intval($_POST['step']) : 1;
 
 // Step 1: Collect database credentials
@@ -135,8 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                         }
                     }
                     
-                    // Don't create lock file yet - wait for admin creation
-                    $step = 3; // Move to admin creation step
+                    // Don't create lock file yet - wait for SMTP config and admin creation
+                    $step = 3; // Move to SMTP configuration step
                 }
                 
             } catch (PDOException $e) {
@@ -146,8 +147,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
     }
 }
 
-// Step 3: Create first admin account
+// Step 3: Configure and test SMTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
+    $smtp_host = trim($_POST['smtp_host'] ?? '');
+    $smtp_port = trim($_POST['smtp_port'] ?? '587');
+    $smtp_encryption = $_POST['smtp_encryption'] ?? 'tls';
+    $smtp_user = trim($_POST['smtp_user'] ?? '');
+    $smtp_pass = $_POST['smtp_pass'] ?? '';
+    $smtp_from_email = trim($_POST['smtp_from_email'] ?? '');
+    $smtp_from_name = trim($_POST['smtp_from_name'] ?? 'Crash Hockey');
+    $test_email = trim($_POST['test_email'] ?? '');
+    
+    if (empty($smtp_host) || empty($smtp_user) || empty($smtp_from_email)) {
+        $error = 'SMTP host, username, and from email are required.';
+    } elseif (empty($test_email)) {
+        $error = 'Test email address is required to verify SMTP configuration.';
+    } else {
+        // Read DB credentials to save SMTP settings
+        if (!file_exists($config_file)) {
+            $error = 'Configuration file not found. Please start setup from the beginning.';
+        } else {
+            $env_data = file_get_contents($config_file);
+            preg_match('/DB_HOST=(.+)/', $env_data, $host_match);
+            preg_match('/DB_NAME=(.+)/', $env_data, $name_match);
+            preg_match('/DB_USER=(.+)/', $env_data, $user_match);
+            preg_match('/DB_PASS_ENCRYPTED=(.+)/', $env_data, $pass_match);
+            preg_match('/ENCRYPTION_KEY_HASH=(.+)/', $env_data, $key_match);
+            
+            if ($host_match && $name_match && $user_match) {
+                $db_host = trim($host_match[1]);
+                $db_name = trim($name_match[1]);
+                $db_user = trim($user_match[1]);
+                
+                // Decrypt password
+                if ($pass_match && $key_match) {
+                    try {
+                        $encrypted_data = trim($pass_match[1]);
+                        $key_hash = hex2bin(trim($key_match[1]));
+                        
+                        $parts = explode('::', base64_decode($encrypted_data), 2);
+                        if (count($parts) === 2) {
+                            $iv = $parts[0];
+                            $encrypted = $parts[1];
+                            $db_pass = openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
+                        }
+                    } catch (Exception $e) {
+                        $db_pass = '';
+                    }
+                } else {
+                    $db_pass = '';
+                }
+                
+                try {
+                    $pdo = new PDO(
+                        "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+                        $db_user,
+                        $db_pass
+                    );
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    // Save SMTP settings to database
+                    $settings = [
+                        'smtp_host' => $smtp_host,
+                        'smtp_port' => $smtp_port,
+                        'smtp_encryption' => $smtp_encryption,
+                        'smtp_user' => $smtp_user,
+                        'smtp_pass' => $smtp_pass,
+                        'smtp_from_email' => $smtp_from_email,
+                        'smtp_from_name' => $smtp_from_name
+                    ];
+                    
+                    $del = $pdo->prepare("DELETE FROM system_settings WHERE setting_key = ?");
+                    $ins = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                    
+                    foreach ($settings as $key => $value) {
+                        $del->execute([$key]);
+                        $ins->execute([$key, $value]);
+                    }
+                    
+                    // Test SMTP by sending a test email
+                    require_once __DIR__ . '/mailer.php';
+                    
+                    // Temporarily override settings for testing
+                    $_ENV['SMTP_HOST'] = $smtp_host;
+                    $_ENV['SMTP_PORT'] = $smtp_port;
+                    $_ENV['SMTP_ENCRYPTION'] = $smtp_encryption;
+                    $_ENV['SMTP_USER'] = $smtp_user;
+                    $_ENV['SMTP_PASS'] = $smtp_pass;
+                    $_ENV['SMTP_FROM_EMAIL'] = $smtp_from_email;
+                    $_ENV['SMTP_FROM_NAME'] = $smtp_from_name;
+                    
+                    $test_result = sendEmail($test_email, 'test', []);
+                    
+                    if ($test_result) {
+                        $smtp_tested = true;
+                        $step = 4; // Move to admin creation
+                    } else {
+                        $error = 'SMTP test failed. Please check your settings and try again.';
+                    }
+                    
+                } catch (PDOException $e) {
+                    $error = 'Database error: ' . $e->getMessage();
+                }
+            } else {
+                $error = 'Invalid configuration file.';
+            }
+        }
+    }
+}
+
+// Step 4: Create first admin account
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
     // Read credentials from config file
     if (!file_exists($config_file)) {
         $error = 'Configuration file not found. Please start setup from the beginning.';
@@ -420,12 +530,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                 <div class="step <?= $step >= 1 ? 'active' : '' ?>">1</div>
                 <div class="step <?= $step >= 2 ? 'active' : '' ?>">2</div>
                 <div class="step <?= $step >= 3 ? 'active' : '' ?>">3</div>
+                <div class="step <?= $step >= 4 ? 'active' : '' ?>">4</div>
             </div>
 
             <?php if ($error): ?>
                 <div class="alert alert-error">
                     <i class="fas fa-exclamation-triangle"></i>
                     <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($smtp_tested): ?>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    SMTP configuration successful! Test email sent.
                 </div>
             <?php endif; ?>
 
@@ -482,13 +600,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                     </button>
                 </form>
             <?php elseif ($step == 3): ?>
+                <h2>SMTP Configuration</h2>
+                <p style="color: #94a3b8; margin-bottom: 20px; line-height: 1.6;">
+                    Configure email settings to enable verification emails and notifications.
+                </p>
+                
+                <form method="POST">
+                    <input type="hidden" name="step" value="3">
+                    
+                    <div class="form-group">
+                        <label>SMTP Host</label>
+                        <input type="text" name="smtp_host" placeholder="smtp.gmail.com" required>
+                        <div class="help-text">Your SMTP server address</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>SMTP Port</label>
+                            <input type="number" name="smtp_port" value="587" required>
+                            <div class="help-text">Usually 587 for TLS or 465 for SSL</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Encryption</label>
+                            <select name="smtp_encryption" style="width: 100%; padding: 12px 15px; background: #06080b; border: 1px solid #1e293b; border-radius: 6px; color: #fff; font-size: 14px;">
+                                <option value="tls">TLS</option>
+                                <option value="ssl">SSL</option>
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>SMTP Username</label>
+                        <input type="text" name="smtp_user" required>
+                        <div class="help-text">Usually your email address</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>SMTP Password</label>
+                        <input type="password" name="smtp_pass" required>
+                        <div class="help-text">Your email password or app-specific password</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>From Email</label>
+                        <input type="email" name="smtp_from_email" required>
+                        <div class="help-text">Email address that will appear as sender</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>From Name</label>
+                        <input type="text" name="smtp_from_name" value="Crash Hockey" required>
+                        <div class="help-text">Name that will appear as sender</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Test Email Address</label>
+                        <input type="email" name="test_email" required>
+                        <div class="help-text">
+                            <strong>Important:</strong> A test email will be sent to verify your SMTP settings
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn">
+                        <i class="fas fa-envelope"></i> Test & Save SMTP Settings
+                    </button>
+                </form>
+            <?php elseif ($step == 4): ?>
                 <h2>Create Admin Account</h2>
                 <p style="color: #94a3b8; margin-bottom: 20px; line-height: 1.6;">
                     Create your first administrator account to manage the system.
                 </p>
                 
                 <form method="POST">
-                    <input type="hidden" name="step" value="3">
+                    <input type="hidden" name="step" value="4">
                     
                     <div class="form-group">
                         <label>First Name</label>
