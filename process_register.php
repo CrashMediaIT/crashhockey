@@ -24,9 +24,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $first = trim($_POST['first_name']);
     $last  = trim($_POST['last_name']);
     $email = trim($_POST['email']);
-    $pos   = $_POST['position'];
-    $dob   = $_POST['birth_date'];
+    $account_type = $_POST['account_type'] ?? 'athlete';
+    $pos   = $_POST['position'] ?? null;
+    $dob   = $_POST['birth_date'] ?? null;
     $pass  = $_POST['password'];
+    
+    // Determine role based on account type
+    $role = ($account_type === 'parent') ? 'parent' : 'athlete';
     
     // Validate email
     if (!isValidEmail($email)) {
@@ -54,10 +58,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         // 2. INSERT USER -> is_verified = 0 (Requires Code)
         $sql = "INSERT INTO users (first_name, last_name, email, password, role, position, birth_date, is_verified, verification_code) 
-                VALUES (?, ?, ?, ?, 'athlete', ?, ?, 0, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$first, $last, $email, $hash_pass, $pos, $dob, $verify_code]);
+        $stmt->execute([$first, $last, $email, $hash_pass, $role, $pos, $dob, $verify_code]);
         
         $user_id = $pdo->lastInsertId();
 

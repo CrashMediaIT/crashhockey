@@ -6,9 +6,10 @@ require 'security.php';
 // Set security headers
 setSecurityHeaders();
 
-// If already logged in, redirect to dashboard
+// If already logged in, redirect to dashboard or specified redirect
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    header("Location: dashboard.php");
+    $redirect = $_GET['redirect'] ?? 'dashboard.php';
+    header("Location: " . $redirect);
     exit();
 }
 
@@ -62,8 +63,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     exit();
                 }
                 
-                // 4. REDIRECT TO DASHBOARD
-                header("Location: dashboard.php");
+                // 4. REDIRECT - check for redirect parameter or go to dashboard
+                $redirect = $_GET['redirect'] ?? 'dashboard.php';
+                header("Location: " . $redirect);
                 exit();
             }
         } else {

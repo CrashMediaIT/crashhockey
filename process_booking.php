@@ -22,6 +22,8 @@ if (file_exists('vendor/autoload.php')) {
 $settings = $pdo->query("SELECT * FROM system_settings")->fetchAll(PDO::FETCH_KEY_PAIR);
 $stripe_secret = $settings['stripe_secret_key'] ?? '';
 $currency = $settings['currency'] ?? 'CAD';
+$tax_rate = floatval($settings['tax_rate'] ?? 13.00); // Default 13% HST
+$tax_name = $settings['tax_name'] ?? 'HST';
 
 if (empty($stripe_secret)) { die("Stripe is not configured in Admin Settings."); }
 \Stripe\Stripe::setApiKey($stripe_secret);
@@ -68,17 +70,24 @@ if (!empty($user_code)) {
     }
 }
 
+// Calculate tax
+$tax_amount = $final_price * ($tax_rate / 100);
+$total_with_tax = $final_price + $tax_amount;
+
 // 6. CREATE STRIPE SESSION
 try {
+    $description = $applied_code ? "Discount '$applied_code' applied" : 'Regular Rate';
+    $description .= " + $tax_name ($tax_rate%)";
+    
     $checkout_session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card'],
         'line_items' => [[
             'price_data' => [
                 'currency' => $currency,
-                'unit_amount' => round($final_price * 100), // Convert to cents
+                'unit_amount' => round($total_with_tax * 100), // Convert to cents (includes tax)
                 'product_data' => [
                     'name' => 'Training Session: ' . $session['title'],
-                    'description' => $applied_code ? "Discount '$applied_code' applied" : 'Regular Rate',
+                    'description' => $description,
                 ],
             ],
             'quantity' => 1,
@@ -89,9 +98,10 @@ try {
         'client_reference_id' => $user_id,
     ]);
 
-    // 7. SAVE PENDING BOOKING IN DB
-    $stmt = $pdo->prepare("INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, discount_code, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
-    $stmt->execute([$user_id, $session_id, $checkout_session->id, $final_price, $original_price, $applied_code]);
+    // 7. SAVE PENDING BOOKING IN DB (with tax amount)
+    $stmt = $pdo->prepare("INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, tax_amount, discount_code, status) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
+    $stmt->execute([$user_id, $session_id, $checkout_session->id, $total_with_tax, $original_price, $tax_amount, $applied_code]);
 
     // Redirect user to Stripe
     header("Location: " . $checkout_session->url);

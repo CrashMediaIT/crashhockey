@@ -30,6 +30,7 @@ setSecurityHeaders();
             
             <div class="nav-menu">
                 <a href="#programs">Programs</a>
+                <a href="public_sessions.php">Sessions</a>
                 <a href="#standards">Standards</a>
                 <a href="login.php" class="nav-btn">Athlete Login</a>
             </div>
@@ -106,7 +107,7 @@ setSecurityHeaders();
             </div>
 
             <div class="library-footer">
-                <a href="register.php">
+                <a href="public_sessions.php">
                     View Full Schedule & Availability <i class="fas fa-arrow-right"></i>
                 </a>
             </div>

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `last_name` VARCHAR(100) NOT NULL,
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
-  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin') DEFAULT 'athlete',
+  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin', 'parent') DEFAULT 'athlete',
   `position` VARCHAR(50) DEFAULT NULL,
   `birth_date` DATE DEFAULT NULL,
   `primary_arena` VARCHAR(255) DEFAULT NULL,
@@ -35,6 +35,46 @@ CREATE TABLE IF NOT EXISTS `locations` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Age Groups
+CREATE TABLE IF NOT EXISTS `age_groups` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `min_age` INT DEFAULT NULL,
+  `max_age` INT DEFAULT NULL,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_name` (`name`),
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Skill Levels
+CREATE TABLE IF NOT EXISTS `skill_levels` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_name` (`name`),
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Managed Athletes (for Parent/Manager accounts)
+CREATE TABLE IF NOT EXISTS `managed_athletes` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `parent_id` INT NOT NULL,
+  `athlete_id` INT NOT NULL,
+  `relationship` VARCHAR(100) DEFAULT 'Parent',
+  `can_book` TINYINT(1) DEFAULT 1,
+  `can_view_stats` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`parent_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`athlete_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_parent_athlete` (`parent_id`, `athlete_id`),
+  INDEX `idx_parent` (`parent_id`),
+  INDEX `idx_athlete` (`athlete_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Session Types
 CREATE TABLE IF NOT EXISTS `session_types` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,14 +92,19 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   `session_time` TIME NOT NULL,
   `session_plan` TEXT,
   `practice_plan_id` INT DEFAULT NULL,
+  `age_group_id` INT DEFAULT NULL,
+  `skill_level_id` INT DEFAULT NULL,
   `arena` VARCHAR(255) NOT NULL,
   `city` VARCHAR(100) NOT NULL,
   `price` DECIMAL(10,2) DEFAULT 0.00,
   `max_capacity` INT DEFAULT 20,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`practice_plan_id`) REFERENCES `practice_plans`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`age_group_id`) REFERENCES `age_groups`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`skill_level_id`) REFERENCES `skill_levels`(`id`) ON DELETE SET NULL,
   INDEX `idx_date` (`session_date`),
-  INDEX `idx_practice_plan` (`practice_plan_id`)
+  INDEX `idx_practice_plan` (`practice_plan_id`),
+  INDEX `idx_age_skill` (`age_group_id`, `skill_level_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bookings
@@ -70,12 +115,16 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `stripe_session_id` VARCHAR(255) DEFAULT NULL,
   `amount_paid` DECIMAL(10,2) NOT NULL,
   `original_price` DECIMAL(10,2) NOT NULL,
+  `tax_amount` DECIMAL(10,2) DEFAULT 0.00,
   `discount_code` VARCHAR(50) DEFAULT NULL,
+  `booked_for_user_id` INT DEFAULT NULL,
   `status` ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON DELETE CASCADE,
-  INDEX `idx_user_session` (`user_id`, `session_id`)
+  FOREIGN KEY (`booked_for_user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user_session` (`user_id`, `session_id`),
+  INDEX `idx_booked_for` (`booked_for_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Discount Codes
@@ -214,10 +263,13 @@ CREATE TABLE IF NOT EXISTS `athlete_teams` (
   `season_year` VARCHAR(20) NOT NULL,
   `season_type` VARCHAR(50) DEFAULT NULL,
   `season` VARCHAR(100) DEFAULT NULL,
+  `skill_level_id` INT DEFAULT NULL,
   `is_current` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  INDEX `idx_user_current` (`user_id`, `is_current`)
+  FOREIGN KEY (`skill_level_id`) REFERENCES `skill_levels`(`id`) ON DELETE SET NULL,
+  INDEX `idx_user_current` (`user_id`, `is_current`),
+  INDEX `idx_skill` (`skill_level_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Athlete Stats
@@ -473,7 +525,7 @@ CREATE TABLE IF NOT EXISTS `permissions` (
 -- Role Permissions
 CREATE TABLE IF NOT EXISTS `role_permissions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin') NOT NULL,
+  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin', 'parent') NOT NULL,
   `permission_id` INT NOT NULL,
   `granted` TINYINT(1) DEFAULT 1,
   FOREIGN KEY (`permission_id`) REFERENCES `permissions`(`id`) ON DELETE CASCADE,
@@ -573,3 +625,44 @@ SELECT 'coach_plus', id, 1 FROM permissions WHERE permission_key IN (
 -- Admin permissions (all permissions)
 INSERT IGNORE INTO `role_permissions` (`role`, `permission_id`, `granted`)
 SELECT 'admin', id, 1 FROM permissions;
+
+-- =========================================================
+-- DEFAULT AGE GROUPS AND SKILL LEVELS
+-- =========================================================
+
+INSERT IGNORE INTO `age_groups` (`name`, `min_age`, `max_age`, `description`, `display_order`) VALUES
+('Mite (U8)', 5, 8, 'Under 8 years old', 1),
+('Squirt (U10)', 9, 10, 'Under 10 years old', 2),
+('Peewee (U12)', 11, 12, 'Under 12 years old', 3),
+('Bantam (U14)', 13, 14, 'Under 14 years old', 4),
+('Midget (U16)', 15, 16, 'Under 16 years old', 5),
+('Midget (U18)', 17, 18, 'Under 18 years old', 6),
+('Junior (U20)', 19, 20, 'Under 20 years old', 7),
+('Adult (18+)', 18, 99, '18 and older', 8);
+
+INSERT IGNORE INTO `skill_levels` (`name`, `description`, `display_order`) VALUES
+('Beginner', 'New to hockey or learning fundamentals', 1),
+('Intermediate', 'Comfortable with basics, developing skills', 2),
+('Advanced', 'High level of skill and hockey IQ', 3),
+('Elite', 'Competitive/travel level', 4),
+('Pro', 'Professional or aspiring professional', 5);
+
+-- =========================================================
+-- DEFAULT SYSTEM SETTINGS
+-- =========================================================
+
+INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
+('tax_rate', '13.00'),
+('tax_name', 'HST'),
+('currency', 'CAD');
+
+-- =========================================================
+-- PARENT ROLE PERMISSIONS
+-- =========================================================
+
+INSERT IGNORE INTO `role_permissions` (`role`, `permission_id`, `granted`)
+SELECT 'parent', id, 1 FROM permissions WHERE permission_key IN (
+  'view_dashboard', 'view_stats', 'view_schedule', 'book_sessions', 
+  'cancel_bookings', 'view_workouts', 'view_nutrition', 'view_videos', 
+  'view_drills', 'view_practice_plans', 'manage_athletes'
+);

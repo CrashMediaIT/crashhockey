@@ -193,18 +193,30 @@ setSecurityHeaders();
                     <input type="email" name="email" required placeholder="name@example.com">
                 </div>
 
-                <div class="form-row">
-                    <div class="input-box">
-                        <label>Position</label>
-                        <select name="position" required>
-                            <option value="Forward">Forward</option>
-                            <option value="Defense">Defense</option>
-                            <option value="Goalie">Goalie</option>
-                        </select>
-                    </div>
-                    <div class="input-box">
-                        <label>Date of Birth</label>
-                        <input type="date" name="birth_date" required>
+                <div class="input-box">
+                    <label>Account Type</label>
+                    <select name="account_type" id="account_type" required onchange="toggleAthleteFields()">
+                        <option value="athlete">Athlete</option>
+                        <option value="parent">Parent/Manager</option>
+                    </select>
+                    <small style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">Parents can manage multiple athletes</small>
+                </div>
+
+                <div id="athlete_fields">
+                    <div class="form-row">
+                        <div class="input-box">
+                            <label>Position</label>
+                            <select name="position">
+                                <option value="">Select Position</option>
+                                <option value="Forward">Forward</option>
+                                <option value="Defense">Defense</option>
+                                <option value="Goalie">Goalie</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label>Date of Birth</label>
+                            <input type="date" name="birth_date">
+                        </div>
                     </div>
                 </div>
 
@@ -223,6 +235,28 @@ setSecurityHeaders();
 
         </div>
     </div>
+
+    <script>
+        function toggleAthleteFields() {
+            const accountType = document.getElementById('account_type').value;
+            const athleteFields = document.getElementById('athlete_fields');
+            
+            if (accountType === 'parent') {
+                athleteFields.style.display = 'none';
+                // Make athlete fields not required
+                document.querySelector('[name="position"]').removeAttribute('required');
+                document.querySelector('[name="birth_date"]').removeAttribute('required');
+            } else {
+                athleteFields.style.display = 'block';
+                // Make athlete fields required again
+                document.querySelector('[name="position"]').setAttribute('required', 'required');
+                document.querySelector('[name="birth_date"]').setAttribute('required', 'required');
+            }
+        }
+        
+        // Initialize on page load
+        toggleAthleteFields();
+    </script>
 
 </body>
 </html>
