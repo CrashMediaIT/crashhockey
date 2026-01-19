@@ -38,6 +38,7 @@ $allowed_pages = [
     'library_nutrition'   => 'views/library_nutrition.php',
     'drills'              => 'views/drills.php',
     'practice_plans'      => 'views/practice_plans.php',
+    'ihs_import'          => 'views/ihs_import.php',
     'athletes'            => 'views/athletes.php',
     'create_session'      => 'views/create_session.php',
     'session_templates'   => 'views/library_sessions.php',
@@ -74,9 +75,81 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         .main-content { flex: 1; padding: 40px; overflow-y: auto; }
         .sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
         .avatar { width: 35px; height: 35px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 10000;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 1024px) {
+            .main-content {
+                padding: 30px 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                display: block;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                height: 100vh;
+                z-index: 9999;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.mobile-open {
+                left: 0;
+            }
+            
+            .main-content {
+                padding: 70px 15px 20px 15px;
+                width: 100%;
+            }
+            
+            .mobile-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 9998;
+            }
+            
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
+
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="mobile-overlay" onclick="toggleMobileMenu()"></div>
 
 <aside class="sidebar">
     <a href="?page=home" class="brand">
@@ -115,6 +188,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=library_nutrition" class="nav-link <?= $page=='library_nutrition'?'active':'' ?>"><i class="fa-solid fa-utensils"></i> Food Library</a>
             <a href="?page=session_templates" class="nav-link <?= $page=='session_templates'?'active':'' ?>"><i class="fa-solid fa-file-invoice"></i> Session Templates</a>
             <a href="?page=create_session" class="nav-link <?= $page=='create_session'?'active':'' ?>"><i class="fa-solid fa-plus-circle"></i> Create Session</a>
+            <a href="?page=ihs_import" class="nav-link <?= $page=='ihs_import'?'active':'' ?>"><i class="fa-solid fa-file-import"></i> IHS Import</a>
         </nav>
     </div>
     <?php endif; ?>
@@ -148,6 +222,22 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     else { echo "<h2 style='color:#ef4444;'>Module missing: $view_file</h2>"; }
     ?>
 </main>
+
+<script>
+function toggleMobileMenu() {
+    document.querySelector('.sidebar').classList.toggle('mobile-open');
+    document.querySelector('.mobile-overlay').classList.toggle('active');
+}
+
+// Close mobile menu when clicking a link
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleMobileMenu();
+        }
+    });
+});
+</script>
 
 </body>
 </html>
