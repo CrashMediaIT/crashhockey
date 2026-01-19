@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS `session_types` (
 CREATE TABLE IF NOT EXISTS `sessions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `session_type` VARCHAR(100) NOT NULL,
+  `session_type_category` ENUM('group', 'private', 'semi-private') DEFAULT 'group',
   `title` VARCHAR(255) NOT NULL,
   `session_date` DATE NOT NULL,
   `session_time` TIME NOT NULL,
@@ -98,33 +99,39 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   `city` VARCHAR(100) NOT NULL,
   `price` DECIMAL(10,2) DEFAULT 0.00,
   `max_capacity` INT DEFAULT 20,
+  `max_athletes` INT DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`practice_plan_id`) REFERENCES `practice_plans`(`id`) ON DELETE SET NULL,
   FOREIGN KEY (`age_group_id`) REFERENCES `age_groups`(`id`) ON DELETE SET NULL,
   FOREIGN KEY (`skill_level_id`) REFERENCES `skill_levels`(`id`) ON DELETE SET NULL,
   INDEX `idx_date` (`session_date`),
   INDEX `idx_practice_plan` (`practice_plan_id`),
-  INDEX `idx_age_skill` (`age_group_id`, `skill_level_id`)
+  INDEX `idx_age_skill` (`age_group_id`, `skill_level_id`),
+  INDEX `idx_type_category` (`session_type_category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bookings
 CREATE TABLE IF NOT EXISTS `bookings` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT NOT NULL,
-  `session_id` INT NOT NULL,
+  `session_id` INT DEFAULT NULL,
+  `package_id` INT DEFAULT NULL,
   `stripe_session_id` VARCHAR(255) DEFAULT NULL,
   `amount_paid` DECIMAL(10,2) NOT NULL,
   `original_price` DECIMAL(10,2) NOT NULL,
   `tax_amount` DECIMAL(10,2) DEFAULT 0.00,
   `discount_code` VARCHAR(50) DEFAULT NULL,
   `booked_for_user_id` INT DEFAULT NULL,
+  `payment_type` ENUM('session', 'package') DEFAULT 'session',
   `status` ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`booked_for_user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
   INDEX `idx_user_session` (`user_id`, `session_id`),
-  INDEX `idx_booked_for` (`booked_for_user_id`)
+  INDEX `idx_booked_for` (`booked_for_user_id`),
+  INDEX `idx_package` (`package_id`),
+  INDEX `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Discount Codes
@@ -138,6 +145,100 @@ CREATE TABLE IF NOT EXISTS `discount_codes` (
   `expiry_date` DATE DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Packages
+CREATE TABLE IF NOT EXISTS `packages` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `package_type` ENUM('bundled', 'credits') NOT NULL,
+  `price` DECIMAL(10,2) NOT NULL,
+  `credits` INT DEFAULT NULL,
+  `valid_days` INT DEFAULT 365,
+  `age_group_id` INT DEFAULT NULL,
+  `skill_level_id` INT DEFAULT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`age_group_id`) REFERENCES `age_groups`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`skill_level_id`) REFERENCES `skill_levels`(`id`) ON DELETE SET NULL,
+  INDEX `idx_type` (`package_type`),
+  INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Package Sessions (for bundled packages)
+CREATE TABLE IF NOT EXISTS `package_sessions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `package_id` INT NOT NULL,
+  `session_id` INT NOT NULL,
+  FOREIGN KEY (`package_id`) REFERENCES `packages`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_package_session` (`package_id`, `session_id`),
+  INDEX `idx_package` (`package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- User Package Credits
+CREATE TABLE IF NOT EXISTS `user_package_credits` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `package_id` INT NOT NULL,
+  `booking_id` INT DEFAULT NULL,
+  `credits_purchased` INT NOT NULL,
+  `credits_remaining` INT NOT NULL,
+  `expiry_date` DATE NOT NULL,
+  `purchased_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`package_id`) REFERENCES `packages`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`booking_id`) REFERENCES `bookings`(`id`) ON DELETE SET NULL,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_expiry` (`expiry_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Expense Categories
+CREATE TABLE IF NOT EXISTS `expense_categories` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Expenses (Accounts Payable)
+CREATE TABLE IF NOT EXISTS `expenses` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `category_id` INT NOT NULL,
+  `vendor_name` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `amount` DECIMAL(10,2) NOT NULL,
+  `tax_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `total_amount` DECIMAL(10,2) NOT NULL,
+  `expense_date` DATE NOT NULL,
+  `receipt_file` VARCHAR(255) DEFAULT NULL,
+  `ocr_data` TEXT DEFAULT NULL,
+  `payment_method` VARCHAR(100) DEFAULT NULL,
+  `reference_number` VARCHAR(100) DEFAULT NULL,
+  `created_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`category_id`) REFERENCES `expense_categories`(`id`) ON DELETE RESTRICT,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE RESTRICT,
+  INDEX `idx_date` (`expense_date`),
+  INDEX `idx_category` (`category_id`),
+  INDEX `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Expense Line Items (from OCR)
+CREATE TABLE IF NOT EXISTS `expense_line_items` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `expense_id` INT NOT NULL,
+  `line_number` INT NOT NULL,
+  `item_description` VARCHAR(500) DEFAULT NULL,
+  `quantity` DECIMAL(10,2) DEFAULT 1.00,
+  `unit_price` DECIMAL(10,2) DEFAULT 0.00,
+  `line_total` DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (`expense_id`) REFERENCES `expenses`(`id`) ON DELETE CASCADE,
+  INDEX `idx_expense` (`expense_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Exercises
@@ -666,3 +767,19 @@ SELECT 'parent', id, 1 FROM permissions WHERE permission_key IN (
   'cancel_bookings', 'view_workouts', 'view_nutrition', 'view_videos', 
   'view_drills', 'view_practice_plans', 'manage_athletes'
 );
+
+-- =========================================================
+-- DEFAULT EXPENSE CATEGORIES
+-- =========================================================
+
+INSERT IGNORE INTO `expense_categories` (`name`, `description`, `display_order`) VALUES
+('Ice Rental', 'Arena and ice time rental fees', 1),
+('Equipment', 'Training equipment, pucks, cones, etc.', 2),
+('Coaching Fees', 'Guest coaches and training staff', 3),
+('Utilities', 'Electricity, water, internet', 4),
+('Marketing', 'Advertising and promotional materials', 5),
+('Office Supplies', 'Paper, pens, printer ink, etc.', 6),
+('Insurance', 'Liability and business insurance', 7),
+('Professional Services', 'Legal, accounting, consulting', 8),
+('Travel', 'Transportation and lodging for events', 9),
+('Miscellaneous', 'Other business expenses', 10);
