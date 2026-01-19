@@ -116,8 +116,8 @@ try {
             
             // Create refund record
             $stmt = $pdo->prepare("
-                INSERT INTO refunds (booking_id, user_id, original_amount, refund_amount, reason, refund_type, stripe_refund_id, processed_by, processed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO refunds (booking_id, user_id, original_amount, refund_amount, refund_reason, stripe_refund_id, refunded_by, refund_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $booking_id,
@@ -125,7 +125,6 @@ try {
                 $booking['amount_paid'],
                 $refund_amount,
                 $reason,
-                $refund_type,
                 $stripe_refund_id,
                 $user_id
             ]);
@@ -221,14 +220,14 @@ try {
             
             foreach ($refunds as $refund) {
                 fputcsv($output, [
-                    date('Y-m-d', strtotime($refund['processed_at'])),
+                    date('Y-m-d', strtotime($refund['refund_date'])),
                     $refund['first_name'] . ' ' . $refund['last_name'],
                     $refund['email'],
                     $refund['session_name'] ?: 'N/A',
                     '$' . number_format($refund['original_amount'], 2),
                     '$' . number_format($refund['refund_amount'], 2),
-                    ucfirst($refund['refund_type']),
-                    $refund['reason'],
+                    ucfirst($refund['status']),
+                    $refund['refund_reason'],
                     $refund['processed_by_name']
                 ]);
             }

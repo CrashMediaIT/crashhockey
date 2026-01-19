@@ -74,18 +74,15 @@ try {
         
         // Record in cloud_receipts table
         $stmt = $pdo->prepare("
-            INSERT INTO cloud_receipts (file_path, file_name, file_hash, ocr_text, vendor, amount, receipt_date, expense_id, processed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO cloud_receipts (file_path, file_name, file_hash, expense_id, processed, ocr_attempted, ocr_data, detected_date, processed_date)
+            VALUES (?, ?, ?, ?, 1, 1, ?, NOW(), NOW())
         ");
         $stmt->execute([
             $file['path'],
             $file['filename'],
             $file_hash,
-            $ocr_text,
-            $parsed_data['vendor'],
-            $parsed_data['amount'],
-            $parsed_data['date'],
-            $expense_id
+            $expense_id,
+            $ocr_text
         ]);
         
         // Create notification for all admins

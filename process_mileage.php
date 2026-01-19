@@ -57,13 +57,13 @@ try {
             // Insert mileage log
             $stmt = $pdo->prepare("
                 INSERT INTO mileage_logs (user_id, trip_date, athlete_id, session_id, purpose, 
-                                         distance_km, distance_miles, rate_per_km, rate_per_mile, 
+                                         total_distance_km, total_distance_miles, reimbursement_rate, 
                                          reimbursement_amount, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $user_id, $trip_date, $athlete_id ?: null, $session_id ?: null, $purpose,
-                $distance_km, $distance_miles, $rate_per_km, $rate_per_mile, $reimbursement_amount
+                $distance_km, $distance_miles, $rate_per_km, $reimbursement_amount
             ]);
             
             $mileage_log_id = $pdo->lastInsertId();
@@ -110,13 +110,13 @@ try {
             $stmt = $pdo->prepare("
                 UPDATE mileage_logs 
                 SET trip_date = ?, athlete_id = ?, session_id = ?, purpose = ?,
-                    distance_km = ?, distance_miles = ?, rate_per_km = ?, rate_per_mile = ?,
+                    total_distance_km = ?, total_distance_miles = ?, reimbursement_rate = ?,
                     reimbursement_amount = ?
                 WHERE id = ? AND user_id = ?
             ");
             $stmt->execute([
                 $trip_date, $athlete_id ?: null, $session_id ?: null, $purpose,
-                $distance_km, $distance_miles, $rate_per_km, $rate_per_mile,
+                $distance_km, $distance_miles, $rate_per_km,
                 $reimbursement_amount, $log_id, $user_id
             ]);
             
@@ -160,7 +160,7 @@ try {
             
             $log_id = intval($_POST['log_id']);
             
-            $stmt = $pdo->prepare("UPDATE mileage_logs SET reimbursed = 1, reimbursed_at = NOW() WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE mileage_logs SET is_reimbursed = 1 WHERE id = ?");
             $stmt->execute([$log_id]);
             
             echo json_encode(['success' => true, 'message' => 'Marked as reimbursed']);
@@ -194,11 +194,11 @@ try {
                     $log['first_name'] . ' ' . $log['last_name'],
                     $log['athlete_name'] ?: 'N/A',
                     $log['purpose'],
-                    number_format($log['distance_km'], 2),
-                    number_format($log['distance_miles'], 2),
-                    '$' . number_format($log['rate_per_km'], 2),
+                    number_format($log['total_distance_km'], 2),
+                    number_format($log['total_distance_miles'], 2),
+                    '$' . number_format($log['reimbursement_rate'], 2),
                     '$' . number_format($log['reimbursement_amount'], 2),
-                    $log['reimbursed'] ? 'Yes' : 'No'
+                    $log['is_reimbursed'] ? 'Yes' : 'No'
                 ]);
             }
             

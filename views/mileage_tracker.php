@@ -551,9 +551,9 @@ function displayLogs(logs) {
         html += '<tr>';
         html += `<td>${new Date(log.trip_date).toLocaleDateString()}</td>`;
         html += `<td>${log.purpose}<br><small style="color: rgba(255,255,255,0.5)">${log.athlete_name || 'No athlete'}</small></td>`;
-        html += `<td>${parseFloat(log.distance_km).toFixed(2)} km<br><small>${parseFloat(log.distance_miles).toFixed(2)} mi</small></td>`;
+        html += `<td>${parseFloat(log.total_distance_km).toFixed(2)} km<br><small>${parseFloat(log.total_distance_miles).toFixed(2)} mi</small></td>`;
         html += `<td>$${parseFloat(log.reimbursement_amount).toFixed(2)}</td>`;
-        html += `<td>${log.reimbursed == 1 ? '<span class="badge badge-success">Paid</span>' : '<span class="badge badge-warning">Pending</span>'}</td>`;
+        html += `<td>${log.is_reimbursed == 1 ? '<span class="badge badge-success">Paid</span>' : '<span class="badge badge-warning">Pending</span>'}</td>`;
         html += `<td>
             <button class="action-btn action-btn-delete" onclick="deleteLog(${log.id})">
                 <i class="fas fa-trash"></i>

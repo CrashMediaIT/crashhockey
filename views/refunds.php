@@ -556,18 +556,18 @@ function displayRefundHistory(refunds) {
     }
     
     let html = '<table class="results-table"><thead><tr>';
-    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Original</th><th>Refunded</th><th>Type</th><th>Reason</th><th>Processed By</th>';
+    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Original</th><th>Refunded</th><th>Status</th><th>Reason</th><th>Processed By</th>';
     html += '</tr></thead><tbody>';
     
     refunds.forEach(refund => {
         html += '<tr>';
-        html += `<td>${new Date(refund.processed_at).toLocaleDateString()}</td>`;
+        html += `<td>${new Date(refund.refund_date).toLocaleDateString()}</td>`;
         html += `<td>${refund.first_name} ${refund.last_name}<br><small style="color: rgba(255,255,255,0.5)">${refund.email}</small></td>`;
         html += `<td>${refund.session_name || 'N/A'}</td>`;
         html += `<td>$${parseFloat(refund.original_amount).toFixed(2)}</td>`;
         html += `<td>$${parseFloat(refund.refund_amount).toFixed(2)}</td>`;
-        html += `<td><span class="badge badge-info">${refund.refund_type}</span></td>`;
-        html += `<td>${refund.reason}</td>`;
+        html += `<td><span class="badge badge-info">${refund.status}</span></td>`;
+        html += `<td>${refund.refund_reason}</td>`;
         html += `<td>${refund.processed_by_name}</td>`;
         html += '</tr>';
     });

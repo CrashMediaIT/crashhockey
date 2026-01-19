@@ -42,7 +42,7 @@ $net_profit = $total_income - $total_expenses;
 $refunds_stmt = $pdo->query("
     SELECT COUNT(*) as pending_refunds, SUM(refund_amount) as pending_amount
     FROM refunds
-    WHERE processed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    WHERE refund_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 ");
 $refunds_data = $refunds_stmt->fetch();
 
@@ -115,8 +115,8 @@ $pending_refunds_stmt = $pdo->query("
     JOIN users u ON r.user_id = u.id
     LEFT JOIN bookings b ON r.booking_id = b.id
     LEFT JOIN sessions s ON b.session_id = s.id
-    WHERE r.processed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    ORDER BY r.processed_at DESC
+    WHERE r.refund_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ORDER BY r.refund_date DESC
     LIMIT 10
 ");
 $pending_refunds = $pending_refunds_stmt->fetchAll();
@@ -523,7 +523,7 @@ $pending_refunds = $pending_refunds_stmt->fetchAll();
                 <tbody>
                     <?php foreach ($pending_refunds as $refund): ?>
                         <tr>
-                            <td><?= date('M d, Y', strtotime($refund['processed_at'])) ?></td>
+                            <td><?= date('M d, Y', strtotime($refund['refund_date'])) ?></td>
                             <td><?= htmlspecialchars($refund['first_name'] . ' ' . $refund['last_name']) ?></td>
                             <td><?= htmlspecialchars($refund['session_name'] ?? 'N/A') ?></td>
                             <td style="font-weight: 700; color: #f59e0b;">
@@ -531,7 +531,7 @@ $pending_refunds = $pending_refunds_stmt->fetchAll();
                             </td>
                             <td>
                                 <span style="padding: 4px 10px; background: #3b82f6; color: white; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                    <?= ucfirst($refund['refund_type']) ?>
+                                    <?= ucfirst($refund['status']) ?>
                                 </span>
                             </td>
                         </tr>
