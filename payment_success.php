@@ -14,6 +14,7 @@ $settings = $pdo->query("SELECT * FROM system_settings")->fetchAll(PDO::FETCH_KE
 \Stripe\Stripe::setApiKey($settings['stripe_secret_key']);
 
 $stripe_sid = $_GET['session_id'] ?? '';
+$payment_type = $_GET['type'] ?? 'session';
 if (!$stripe_sid) { header("Location: dashboard.php"); exit(); }
 
 try {
@@ -22,8 +23,111 @@ try {
 
     if ($checkout->payment_status == 'paid') {
         
-        // 4. FIND ALL PENDING BOOKINGS WITH THIS STRIPE SESSION (for multi-athlete bookings)
-        $stmt = $pdo->prepare("
+        // Handle package purchase
+        if ($payment_type === 'package' && isset($_SESSION['package_purchase'])) {
+            $purchase_data = $_SESSION['package_purchase'];
+            
+            // Check if already processed
+            $check = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE stripe_session_id = ? AND payment_type = 'package'");
+            $check->execute([$stripe_sid]);
+            
+            if ($check->fetchColumn() == 0) {
+                // Get package details
+                $pkg_stmt = $pdo->prepare("SELECT * FROM packages WHERE id = ?");
+                $pkg_stmt->execute([$purchase_data['package_id']]);
+                $package = $pkg_stmt->fetch(PDO::FETCH_ASSOC);
+                
+                foreach ($purchase_data['athlete_ids'] as $athlete_id) {
+                    // Create booking record
+                    $booking_stmt = $pdo->prepare("
+                        INSERT INTO bookings (user_id, package_id, stripe_session_id, amount_paid, 
+                                            original_price, tax_amount, booked_for_user_id, payment_type, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 'package', 'paid')
+                    ");
+                    $booking_stmt->execute([
+                        $_SESSION['user_id'],
+                        $purchase_data['package_id'],
+                        $stripe_sid,
+                        $purchase_data['total'],
+                        $purchase_data['subtotal'],
+                        $purchase_data['tax_amount'],
+                        $athlete_id
+                    ]);
+                    
+                    $booking_id = $pdo->lastInsertId();
+                    
+                    // Add credits if credit package
+                    if ($package['package_type'] === 'credits') {
+                        $expiry_date = date('Y-m-d', strtotime("+{$package['valid_days']} days"));
+                        
+                        $credit_stmt = $pdo->prepare("
+                            INSERT INTO user_package_credits 
+                            (user_id, package_id, booking_id, credits_purchased, credits_remaining, expiry_date)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        $credit_stmt->execute([
+                            $athlete_id,
+                            $package['id'],
+                            $booking_id,
+                            $package['credits'],
+                            $package['credits'],
+                            $expiry_date
+                        ]);
+                    } else {
+                        // For bundled packages, create bookings for each session
+                        $sessions_stmt = $pdo->prepare("
+                            SELECT session_id FROM package_sessions WHERE package_id = ?
+                        ");
+                        $sessions_stmt->execute([$package['id']]);
+                        $package_sessions = $sessions_stmt->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        foreach ($package_sessions as $session_id) {
+                            $session_booking_stmt = $pdo->prepare("
+                                INSERT INTO bookings (user_id, session_id, package_id, stripe_session_id, 
+                                                    amount_paid, original_price, tax_amount, 
+                                                    booked_for_user_id, payment_type, status)
+                                VALUES (?, ?, ?, ?, 0, 0, 0, ?, 'package', 'paid')
+                            ");
+                            $session_booking_stmt->execute([
+                                $_SESSION['user_id'],
+                                $session_id,
+                                $package['id'],
+                                $stripe_sid,
+                                $athlete_id
+                            ]);
+                        }
+                    }
+                    
+                    // Send email and notification
+                    $athlete_stmt = $pdo->prepare("SELECT first_name, last_name, email FROM users WHERE id = ?");
+                    $athlete_stmt->execute([$athlete_id]);
+                    $athlete = $athlete_stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    sendEmail($athlete['email'], 'package_receipt', [
+                        'name' => $athlete['first_name'] . ' ' . $athlete['last_name'],
+                        'package_name' => $package['name'],
+                        'amount' => number_format($purchase_data['total'], 2),
+                        'credits' => $package['credits'] ?? 0,
+                        'trans_id' => $stripe_sid
+                    ]);
+                    
+                    createNotification(
+                        $pdo,
+                        $athlete_id,
+                        'package',
+                        'Package Purchase Confirmed',
+                        "Successfully purchased " . $package['name'],
+                        'dashboard.php?page=packages',
+                        false
+                    );
+                }
+            }
+            
+            unset($_SESSION['package_purchase']);
+        } else {
+            // Handle session booking (original code)
+            // 4. FIND ALL PENDING BOOKINGS WITH THIS STRIPE SESSION (for multi-athlete bookings)
+            $stmt = $pdo->prepare("
             SELECT b.*, s.title, s.session_date, s.session_time, u.email, u.first_name,
                    athlete.first_name as athlete_first_name, athlete.last_name as athlete_last_name,
                    athlete.email as athlete_email
@@ -82,6 +186,7 @@ try {
                     false // Email already sent
                 );
             }
+        }
         }
     }
 } catch (Exception $e) {

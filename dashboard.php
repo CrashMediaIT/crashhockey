@@ -45,11 +45,18 @@ $allowed_pages = [
     'create_session'      => 'views/create_session.php',
     'session_templates'   => 'views/library_sessions.php',
     'session_detail'      => 'views/session_detail.php',
+    'packages'            => 'views/packages.php',
     'admin_locations'     => 'views/admin_locations.php',
     'admin_session_types' => 'views/admin_session_types.php',
     'admin_discounts'     => 'views/admin_discounts.php',
     'admin_permissions'   => 'views/admin_permissions.php',
     'admin_age_skill'     => 'views/admin_age_skill.php',
+    'admin_packages'      => 'views/admin_packages.php',
+    'accounting'          => 'views/accounting.php',
+    'reports_income'      => 'views/reports_income.php',
+    'reports_athlete'     => 'views/reports_athlete.php',
+    'accounts_payable'    => 'views/accounts_payable.php',
+    'expense_categories'  => 'views/expense_categories.php',
     'settings'            => 'views/settings.php',
     'manage_athletes'     => 'views/manage_athletes.php'
 ];
@@ -181,6 +188,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <nav class="nav-menu">
             <a href="?page=session_history" class="nav-link <?= $page=='session_history'?'active':'' ?>"><i class="fa-solid fa-clock-rotate-left"></i> Session History</a>
             <a href="?page=payment_history" class="nav-link <?= $page=='payment_history'?'active':'' ?>"><i class="fa-solid fa-credit-card"></i> Payment History</a>
+            <a href="?page=packages" class="nav-link <?= $page=='packages'?'active':'' ?>"><i class="fa-solid fa-box"></i> Session Packages</a>
         </nav>
     </div>
 
@@ -215,8 +223,20 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_session_types" class="nav-link <?= $page=='admin_session_types'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Session Types</a>
             <a href="?page=admin_age_skill" class="nav-link <?= $page=='admin_age_skill'?'active':'' ?>"><i class="fa-solid fa-users-cog"></i> Age & Skill Levels</a>
             <a href="?page=admin_discounts" class="nav-link <?= $page=='admin_discounts'?'active':'' ?>"><i class="fa-solid fa-percent"></i> Discounts</a>
+            <a href="?page=admin_packages" class="nav-link <?= $page=='admin_packages'?'active':'' ?>"><i class="fa-solid fa-box-open"></i> Packages</a>
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
+        </nav>
+    </div>
+    
+    <div class="nav-group">
+        <span class="nav-label">Accounting & Reports</span>
+        <nav class="nav-menu">
+            <a href="?page=accounting" class="nav-link <?= $page=='accounting'?'active':'' ?>"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+            <a href="?page=reports_income" class="nav-link <?= $page=='reports_income'?'active':'' ?>"><i class="fa-solid fa-file-invoice-dollar"></i> Income Reports</a>
+            <a href="?page=reports_athlete" class="nav-link <?= $page=='reports_athlete'?'active':'' ?>"><i class="fa-solid fa-user-tag"></i> Athlete Billing</a>
+            <a href="?page=accounts_payable" class="nav-link <?= $page=='accounts_payable'?'active':'' ?>"><i class="fa-solid fa-receipt"></i> Expenses</a>
+            <a href="?page=expense_categories" class="nav-link <?= $page=='expense_categories'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Expense Categories</a>
         </nav>
     </div>
     <?php endif; ?>

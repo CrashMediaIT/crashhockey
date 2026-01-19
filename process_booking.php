@@ -77,6 +77,75 @@ $stmt->execute([$session_id]);
 $session = $stmt->fetch();
 if (!$session) { die("Session not found."); }
 
+// CHECK FOR PACKAGE CREDITS FIRST
+$has_credits = false;
+$credit_bookings = [];
+
+foreach ($athlete_ids as $athlete_id) {
+    // Check if athlete has available credits
+    $credit_check = $pdo->prepare("
+        SELECT upc.id, upc.credits_remaining, upc.package_id
+        FROM user_package_credits upc
+        WHERE upc.user_id = ? AND upc.credits_remaining > 0 AND upc.expiry_date >= CURDATE()
+        ORDER BY upc.expiry_date ASC
+        LIMIT 1
+    ");
+    $credit_check->execute([$athlete_id]);
+    $credit = $credit_check->fetch(PDO::FETCH_ASSOC);
+    
+    if ($credit) {
+        $has_credits = true;
+        $credit_bookings[$athlete_id] = $credit;
+    }
+}
+
+// If all athletes have credits, use them instead of payment
+if ($has_credits && count($credit_bookings) === count($athlete_ids)) {
+    $pdo->beginTransaction();
+    
+    try {
+        foreach ($athlete_ids as $athlete_id) {
+            $credit = $credit_bookings[$athlete_id];
+            
+            // Create booking using credit
+            $booking_stmt = $pdo->prepare("
+                INSERT INTO bookings (user_id, session_id, package_id, amount_paid, original_price, 
+                                    tax_amount, booked_for_user_id, payment_type, status)
+                VALUES (?, ?, ?, 0, 0, 0, ?, 'package', 'paid')
+            ");
+            $booking_stmt->execute([$user_id, $session_id, $credit['package_id'], $athlete_id]);
+            
+            // Deduct credit
+            $update_credit = $pdo->prepare("
+                UPDATE user_package_credits 
+                SET credits_remaining = credits_remaining - 1 
+                WHERE id = ?
+            ");
+            $update_credit->execute([$credit['id']]);
+            
+            // Send notification
+            createNotification(
+                $pdo,
+                $athlete_id,
+                'booking',
+                'Session Booked with Package Credit',
+                "Booked " . $session['title'] . " using package credit",
+                'dashboard.php?page=session_detail&id=' . $session_id,
+                true
+            );
+        }
+        
+        $pdo->commit();
+        header("Location: dashboard.php?page=schedule&status=booked_with_credit");
+        exit();
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Credit booking error: " . $e->getMessage());
+        die("Error processing credit booking: " . $e->getMessage());
+    }
+}
+
 // Check capacity for multiple bookings
 $current_bookings_stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE session_id = ? AND status = 'paid'");
 $current_bookings_stmt->execute([$session_id]);

@@ -16,6 +16,7 @@ checkCsrfToken();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $type      = $_POST['session_type'];
+    $type_category = $_POST['session_type_category'] ?? 'group';
     $title     = trim($_POST['title']);
     $plan_text = trim($_POST['session_plan'] ?? '');
     $practice_plan_id = !empty($_POST['practice_plan_id']) ? intval($_POST['practice_plan_id']) : null;
@@ -23,6 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $time      = $_POST['time'];
     $price     = !empty($_POST['price']) ? floatval($_POST['price']) : 0;
     $capacity  = !empty($_POST['capacity']) ? intval($_POST['capacity']) : 20;
+    $max_athletes = !empty($_POST['max_athletes']) ? intval($_POST['max_athletes']) : null;
     
     // FETCH LOCATION DETAILS from ID
     $loc_id = $_POST['location_id'];
@@ -40,11 +42,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     try {
         $sql = "INSERT INTO sessions 
-                (session_type, title, session_plan, practice_plan_id, session_date, session_time, max_capacity, price, arena, city) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (session_type, session_type_category, title, session_plan, practice_plan_id, session_date, 
+                 session_time, max_capacity, max_athletes, price, arena, city) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$type, $title, $plan_text, $practice_plan_id, $date, $time, $capacity, $price, $arena, $city]);
+        $stmt->execute([$type, $type_category, $title, $plan_text, $practice_plan_id, $date, $time, 
+                       $capacity, $max_athletes, $price, $arena, $city]);
         
         $session_id = $pdo->lastInsertId();
         
