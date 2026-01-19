@@ -49,6 +49,7 @@ $allowed_pages = [
     'admin_session_types' => 'views/admin_session_types.php',
     'admin_discounts'     => 'views/admin_discounts.php',
     'admin_permissions'   => 'views/admin_permissions.php',
+    'admin_age_skill'     => 'views/admin_age_skill.php',
     'settings'            => 'views/settings.php',
     'manage_athletes'     => 'views/manage_athletes.php'
 ];
@@ -212,6 +213,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <nav class="nav-menu">
             <a href="?page=admin_locations" class="nav-link <?= $page=='admin_locations'?'active':'' ?>"><i class="fa-solid fa-map-location-dot"></i> Locations</a>
             <a href="?page=admin_session_types" class="nav-link <?= $page=='admin_session_types'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Session Types</a>
+            <a href="?page=admin_age_skill" class="nav-link <?= $page=='admin_age_skill'?'active':'' ?>"><i class="fa-solid fa-users-cog"></i> Age & Skill Levels</a>
             <a href="?page=admin_discounts" class="nav-link <?= $page=='admin_discounts'?'active':'' ?>"><i class="fa-solid fa-percent"></i> Discounts</a>
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
