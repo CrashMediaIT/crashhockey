@@ -403,9 +403,17 @@ $tax_name = $settings['tax_name'] ?? 'HST';
             // Check if current user/athlete already booked this session
             $booked = false;
             if ($isParent && isset($_GET['athlete_id'])) {
-                $check_stmt = $pdo->prepare("SELECT id FROM bookings WHERE user_id = ? AND session_id = ? AND status = 'paid'");
-                $check_stmt->execute([$_GET['athlete_id'], $session['id']]);
-                $booked = $check_stmt->fetch() !== false;
+                $athlete_id = intval($_GET['athlete_id']);
+                
+                // Verify parent has permission to view this athlete
+                $verify_stmt = $pdo->prepare("SELECT athlete_id FROM managed_athletes WHERE parent_id = ? AND athlete_id = ?");
+                $verify_stmt->execute([$user_id, $athlete_id]);
+                
+                if ($verify_stmt->fetch()) {
+                    $check_stmt = $pdo->prepare("SELECT id FROM bookings WHERE user_id = ? AND session_id = ? AND status = 'paid'");
+                    $check_stmt->execute([$athlete_id, $session['id']]);
+                    $booked = $check_stmt->fetch() !== false;
+                }
             } elseif (!$isParent) {
                 $check_stmt = $pdo->prepare("SELECT id FROM bookings WHERE user_id = ? AND session_id = ? AND status = 'paid'");
                 $check_stmt->execute([$user_id, $session['id']]);
@@ -547,7 +555,8 @@ function applyFilters(select, filterType) {
 function openBookingModal(sessionId, sessionTitle, sessionPrice) {
     document.getElementById('modal_session_id').value = sessionId;
     document.getElementById('modal_session_title').textContent = sessionTitle;
-    document.getElementById('modal_session_price').textContent = (sessionPrice * (1 + <?= $tax_rate ?> / 100)).toFixed(2);
+    var taxRate = <?= floatval($tax_rate) ?>;
+    document.getElementById('modal_session_price').textContent = (sessionPrice * (1 + taxRate / 100)).toFixed(2);
     document.getElementById('bookingModal').classList.add('active');
     
     // Uncheck all checkboxes

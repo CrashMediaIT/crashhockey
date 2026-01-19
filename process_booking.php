@@ -166,15 +166,14 @@ try {
         $booked_for = ($is_parent_booking) ? $athlete_id : null;
         
         $stmt->execute([
-            $user_id,           // Who made the booking
+            $user_id,
             $session_id,
             $stripe_session_id,
-            $total_per_athlete, // Amount per athlete
+            $total_per_athlete,
             $original_price,
             $tax_amount,
             $applied_code,
-            $booked_for,        // Who it's booked for (null if booking for self)
-            
+            $booked_for
         ]);
         
         // Log security event

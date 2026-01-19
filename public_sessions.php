@@ -235,6 +235,11 @@ $age_groups = $pdo->query("SELECT * FROM age_groups ORDER BY display_order")->fe
 $skill_levels = $pdo->query("SELECT * FROM skill_levels ORDER BY display_order")->fetchAll();
 $session_types = $pdo->query("SELECT DISTINCT session_type FROM sessions ORDER BY session_type")->fetchAll();
 
+// Get tax settings
+$settings = $pdo->query("SELECT * FROM system_settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+$tax_rate = floatval($settings['tax_rate'] ?? 13.00);
+$tax_name = $settings['tax_name'] ?? 'HST';
+
 // Build query for sessions
 $query = "SELECT s.*, 
           ag.name as age_group_name,
@@ -338,7 +343,6 @@ $sessions = $stmt->fetchAll();
                         <?php
                         $spots_left = $session['max_capacity'] - $session['booked_count'];
                         $is_low = $spots_left <= 5;
-                        $tax_rate = 13; // Default HST
                         $price_with_tax = $session['price'] * (1 + $tax_rate / 100);
                         ?>
                         <div class="session-card">
