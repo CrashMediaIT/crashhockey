@@ -57,6 +57,9 @@ $allowed_pages = [
     'reports_athlete'     => 'views/reports_athlete.php',
     'accounts_payable'    => 'views/accounts_payable.php',
     'expense_categories'  => 'views/expense_categories.php',
+    'billing_dashboard'   => 'views/billing_dashboard.php',
+    'mileage_tracker'     => 'views/mileage_tracker.php',
+    'refunds'             => 'views/refunds.php',
     'settings'            => 'views/settings.php',
     'manage_athletes'     => 'views/manage_athletes.php'
 ];
@@ -232,11 +235,14 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <div class="nav-group">
         <span class="nav-label">Accounting & Reports</span>
         <nav class="nav-menu">
-            <a href="?page=accounting" class="nav-link <?= $page=='accounting'?'active':'' ?>"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+            <a href="?page=billing_dashboard" class="nav-link <?= $page=='billing_dashboard'?'active':'' ?>"><i class="fa-solid fa-chart-pie"></i> Billing Dashboard</a>
+            <a href="?page=accounting" class="nav-link <?= $page=='accounting'?'active':'' ?>"><i class="fa-solid fa-chart-line"></i> Accounting</a>
             <a href="?page=reports_income" class="nav-link <?= $page=='reports_income'?'active':'' ?>"><i class="fa-solid fa-file-invoice-dollar"></i> Income Reports</a>
             <a href="?page=reports_athlete" class="nav-link <?= $page=='reports_athlete'?'active':'' ?>"><i class="fa-solid fa-user-tag"></i> Athlete Billing</a>
             <a href="?page=accounts_payable" class="nav-link <?= $page=='accounts_payable'?'active':'' ?>"><i class="fa-solid fa-receipt"></i> Expenses</a>
             <a href="?page=expense_categories" class="nav-link <?= $page=='expense_categories'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Expense Categories</a>
+            <a href="?page=mileage_tracker" class="nav-link <?= $page=='mileage_tracker'?'active':'' ?>"><i class="fa-solid fa-route"></i> Mileage Tracker</a>
+            <a href="?page=refunds" class="nav-link <?= $page=='refunds'?'active':'' ?>"><i class="fa-solid fa-undo"></i> Refunds</a>
         </nav>
     </div>
     <?php endif; ?>

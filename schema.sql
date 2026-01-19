@@ -241,6 +241,80 @@ CREATE TABLE IF NOT EXISTS `expense_line_items` (
   INDEX `idx_expense` (`expense_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Cloud Receipts (Nextcloud Integration)
+CREATE TABLE IF NOT EXISTS `cloud_receipts` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `file_path` VARCHAR(500) NOT NULL,
+  `file_name` VARCHAR(255) NOT NULL,
+  `file_hash` VARCHAR(64) NOT NULL UNIQUE,
+  `expense_id` INT DEFAULT NULL,
+  `processed` TINYINT(1) DEFAULT 0,
+  `ocr_attempted` TINYINT(1) DEFAULT 0,
+  `ocr_data` TEXT DEFAULT NULL,
+  `detected_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `processed_date` TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (`expense_id`) REFERENCES `expenses`(`id`) ON DELETE SET NULL,
+  INDEX `idx_processed` (`processed`),
+  INDEX `idx_hash` (`file_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Mileage Logs
+CREATE TABLE IF NOT EXISTS `mileage_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `athlete_id` INT DEFAULT NULL,
+  `session_id` INT DEFAULT NULL,
+  `trip_date` DATE NOT NULL,
+  `purpose` VARCHAR(500) DEFAULT NULL,
+  `start_location` VARCHAR(500) NOT NULL,
+  `end_location` VARCHAR(500) NOT NULL,
+  `total_distance_km` DECIMAL(10,2) NOT NULL,
+  `total_distance_miles` DECIMAL(10,2) NOT NULL,
+  `reimbursement_rate` DECIMAL(10,2) DEFAULT 0.00,
+  `reimbursement_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `is_reimbursed` TINYINT(1) DEFAULT 0,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`athlete_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON DELETE SET NULL,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_date` (`trip_date`),
+  INDEX `idx_reimbursed` (`is_reimbursed`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Mileage Stops
+CREATE TABLE IF NOT EXISTS `mileage_stops` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `mileage_log_id` INT NOT NULL,
+  `stop_order` INT NOT NULL,
+  `location` VARCHAR(500) NOT NULL,
+  `distance_from_previous_km` DECIMAL(10,2) DEFAULT 0.00,
+  `distance_from_previous_miles` DECIMAL(10,2) DEFAULT 0.00,
+  FOREIGN KEY (`mileage_log_id`) REFERENCES `mileage_logs`(`id`) ON DELETE CASCADE,
+  INDEX `idx_log` (`mileage_log_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Refunds
+CREATE TABLE IF NOT EXISTS `refunds` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `booking_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `refunded_by` INT NOT NULL,
+  `original_amount` DECIMAL(10,2) NOT NULL,
+  `refund_amount` DECIMAL(10,2) NOT NULL,
+  `refund_reason` TEXT DEFAULT NULL,
+  `stripe_refund_id` VARCHAR(255) DEFAULT NULL,
+  `status` ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+  `refund_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`booking_id`) REFERENCES `bookings`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`refunded_by`) REFERENCES `users`(`id`) ON DELETE RESTRICT,
+  INDEX `idx_booking` (`booking_id`),
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_date` (`refund_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Exercises
 CREATE TABLE IF NOT EXISTS `exercises` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -783,3 +857,17 @@ INSERT IGNORE INTO `expense_categories` (`name`, `description`, `display_order`)
 ('Professional Services', 'Legal, accounting, consulting', 8),
 ('Travel', 'Transportation and lodging for events', 9),
 ('Miscellaneous', 'Other business expenses', 10);
+
+-- =========================================================
+-- ADDITIONAL SYSTEM SETTINGS FOR NEW FEATURES
+-- =========================================================
+
+INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
+('nextcloud_url', ''),
+('nextcloud_username', ''),
+('nextcloud_password', ''),
+('nextcloud_receipt_folder', '/receipts'),
+('google_maps_api_key', ''),
+('mileage_rate_per_km', '0.68'),
+('mileage_rate_per_mile', '1.09'),
+('receipt_scan_enabled', '0');

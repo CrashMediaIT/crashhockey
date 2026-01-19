@@ -1,0 +1,589 @@
+<?php
+// views/refunds.php - Refund management interface
+require_once __DIR__ . '/../security.php';
+
+if ($_SESSION['user_role'] !== 'admin') {
+    die('Access denied');
+}
+
+// Get recent sessions for search
+$sessions_stmt = $pdo->query("
+    SELECT id, session_name, session_date 
+    FROM sessions 
+    WHERE session_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+    ORDER BY session_date DESC
+    LIMIT 100
+");
+$sessions = $sessions_stmt->fetchAll();
+?>
+
+<style>
+    .refunds-container {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+    
+    .search-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .search-card h3 {
+        color: white;
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .search-card h3 i {
+        color: var(--primary);
+    }
+    
+    .search-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 0;
+    }
+    
+    .form-group label {
+        display: block;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: white;
+        font-size: 1rem;
+    }
+    
+    .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+    
+    .btn {
+        padding: 12px 25px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #e64500;
+    }
+    
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .results-table th {
+        background: rgba(255, 77, 0, 0.1);
+        color: var(--primary);
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--primary);
+    }
+    
+    .results-table td {
+        padding: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .results-table tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .badge-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .badge-info {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .badge-warning {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: #0a0e14;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+    
+    .modal-header h3 {
+        color: white;
+        font-size: 1.4rem;
+        margin: 0;
+    }
+    
+    .close-modal {
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+    }
+    
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .tab {
+        padding: 12px 25px;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        transition: 0.2s;
+    }
+    
+    .tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+</style>
+
+<div class="dash-content refunds-container">
+    <div class="dash-header">
+        <h2><i class="fas fa-undo"></i> Refund Management</h2>
+        <p style="color: rgba(255, 255, 255, 0.6);">Process refunds and view refund history</p>
+    </div>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('bookings')">Search Bookings</button>
+        <button class="tab" onclick="switchTab('history')">Refund History</button>
+    </div>
+    
+    <!-- Search Bookings Tab -->
+    <div id="bookingsTab" class="tab-content active">
+        <div class="search-card">
+            <h3><i class="fas fa-search"></i> Search Bookings</h3>
+            
+            <div class="search-grid">
+                <div class="form-group">
+                    <label>Customer Email</label>
+                    <input type="email" id="searchEmail" placeholder="Enter email">
+                </div>
+                
+                <div class="form-group">
+                    <label>Session</label>
+                    <select id="searchSession">
+                        <option value="">-- All Sessions --</option>
+                        <?php foreach ($sessions as $session): ?>
+                            <option value="<?= $session['id'] ?>">
+                                <?= htmlspecialchars($session['session_name']) ?> - 
+                                <?= date('M d, Y', strtotime($session['session_date'])) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="searchStartDate" value="<?= date('Y-m-01') ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="searchEndDate" value="<?= date('Y-m-t') ?>">
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="searchBookings()">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+        
+        <div id="bookingsResults" style="overflow-x: auto;"></div>
+    </div>
+    
+    <!-- Refund History Tab -->
+    <div id="historyTab" class="tab-content">
+        <div class="search-card">
+            <h3>
+                <i class="fas fa-history"></i> Refund History
+                <button class="btn btn-secondary" onclick="exportRefunds()" style="margin-left: auto; padding: 8px 15px; font-size: 0.85rem;">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </h3>
+            
+            <div class="search-grid" style="grid-template-columns: 1fr 1fr auto;">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="historyStartDate" value="<?= date('Y-m-01') ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="historyEndDate" value="<?= date('Y-m-t') ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary" onclick="loadRefundHistory()">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="historyResults" style="overflow-x: auto;"></div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+<div id="refundModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-undo"></i> Process Refund</h3>
+            <button class="close-modal" onclick="closeRefundModal()">×</button>
+        </div>
+        
+        <form id="refundForm">
+            <?= csrfTokenInput() ?>
+            <input type="hidden" name="action" value="process_refund">
+            <input type="hidden" name="booking_id" id="refundBookingId">
+            
+            <div class="form-group">
+                <label>Customer</label>
+                <input type="text" id="refundCustomer" readonly style="background: rgba(255, 255, 255, 0.05);">
+            </div>
+            
+            <div class="form-group">
+                <label>Session</label>
+                <input type="text" id="refundSession" readonly style="background: rgba(255, 255, 255, 0.05);">
+            </div>
+            
+            <div class="form-group">
+                <label>Original Amount</label>
+                <input type="text" id="refundOriginalAmount" readonly style="background: rgba(255, 255, 255, 0.05);">
+            </div>
+            
+            <div class="form-group">
+                <label>Refund Type</label>
+                <select name="refund_type" id="refundType" onchange="updateRefundAmount()" required>
+                    <option value="full">Full Refund</option>
+                    <option value="partial">Partial Refund</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Refund Amount</label>
+                <input type="number" name="refund_amount" id="refundAmount" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Reason</label>
+                <textarea name="reason" rows="3" required placeholder="Enter reason for refund" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: white; font-family: inherit;"></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    <i class="fas fa-check"></i> Process Refund
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeRefundModal()">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentBookingAmount = 0;
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    
+    if (tab === 'bookings') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+        document.getElementById('bookingsTab').classList.add('active');
+    } else {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+        document.getElementById('historyTab').classList.add('active');
+        loadRefundHistory();
+    }
+}
+
+async function searchBookings() {
+    const email = document.getElementById('searchEmail').value;
+    const sessionId = document.getElementById('searchSession').value;
+    const startDate = document.getElementById('searchStartDate').value;
+    const endDate = document.getElementById('searchEndDate').value;
+    
+    try {
+        const params = new URLSearchParams({
+            action: 'search_bookings',
+            email: email,
+            session_id: sessionId,
+            start_date: startDate,
+            end_date: endDate
+        });
+        
+        const response = await fetch(`process_refunds.php?${params}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayBookings(result.bookings);
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error searching bookings: ' + error.message);
+    }
+}
+
+function displayBookings(bookings) {
+    const container = document.getElementById('bookingsResults');
+    
+    if (bookings.length === 0) {
+        container.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center; padding: 40px;">No bookings found</p>';
+        return;
+    }
+    
+    let html = '<table class="results-table"><thead><tr>';
+    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Athlete</th><th>Amount</th><th>Status</th><th>Actions</th>';
+    html += '</tr></thead><tbody>';
+    
+    bookings.forEach(booking => {
+        html += '<tr>';
+        html += `<td>${new Date(booking.session_date).toLocaleDateString()}</td>`;
+        html += `<td>${booking.first_name} ${booking.last_name}<br><small style="color: rgba(255,255,255,0.5)">${booking.email}</small></td>`;
+        html += `<td>${booking.session_name}</td>`;
+        html += `<td>${booking.athlete_name || 'N/A'}</td>`;
+        html += `<td>$${parseFloat(booking.amount_paid).toFixed(2)}</td>`;
+        html += `<td><span class="badge badge-success">${booking.payment_status}</span></td>`;
+        html += `<td>
+            <button class="btn btn-primary" style="padding: 8px 15px; font-size: 0.85rem;" onclick='openRefundModal(${JSON.stringify(booking)})'>
+                <i class="fas fa-undo"></i> Refund
+            </button>
+        </td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function openRefundModal(booking) {
+    document.getElementById('refundBookingId').value = booking.id;
+    document.getElementById('refundCustomer').value = `${booking.first_name} ${booking.last_name} (${booking.email})`;
+    document.getElementById('refundSession').value = booking.session_name;
+    document.getElementById('refundOriginalAmount').value = `$${parseFloat(booking.amount_paid).toFixed(2)}`;
+    document.getElementById('refundAmount').value = parseFloat(booking.amount_paid).toFixed(2);
+    document.getElementById('refundType').value = 'full';
+    
+    currentBookingAmount = parseFloat(booking.amount_paid);
+    
+    document.getElementById('refundModal').classList.add('active');
+}
+
+function closeRefundModal() {
+    document.getElementById('refundModal').classList.remove('active');
+    document.getElementById('refundForm').reset();
+}
+
+function updateRefundAmount() {
+    const type = document.getElementById('refundType').value;
+    const amountField = document.getElementById('refundAmount');
+    
+    if (type === 'full') {
+        amountField.value = currentBookingAmount.toFixed(2);
+        amountField.max = currentBookingAmount;
+    } else {
+        amountField.value = '';
+        amountField.max = currentBookingAmount;
+    }
+}
+
+document.getElementById('refundForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!confirm('Are you sure you want to process this refund? This action cannot be undone.')) {
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('process_refunds.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Refund processed successfully!');
+            closeRefundModal();
+            searchBookings();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error processing refund: ' + error.message);
+    }
+});
+
+async function loadRefundHistory() {
+    const startDate = document.getElementById('historyStartDate').value;
+    const endDate = document.getElementById('historyEndDate').value;
+    
+    try {
+        const params = new URLSearchParams({
+            action: 'list_refunds',
+            start_date: startDate,
+            end_date: endDate
+        });
+        
+        const response = await fetch(`process_refunds.php?${params}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayRefundHistory(result.refunds);
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error loading refund history: ' + error.message);
+    }
+}
+
+function displayRefundHistory(refunds) {
+    const container = document.getElementById('historyResults');
+    
+    if (refunds.length === 0) {
+        container.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center; padding: 40px;">No refunds found</p>';
+        return;
+    }
+    
+    let html = '<table class="results-table"><thead><tr>';
+    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Original</th><th>Refunded</th><th>Type</th><th>Reason</th><th>Processed By</th>';
+    html += '</tr></thead><tbody>';
+    
+    refunds.forEach(refund => {
+        html += '<tr>';
+        html += `<td>${new Date(refund.processed_at).toLocaleDateString()}</td>`;
+        html += `<td>${refund.first_name} ${refund.last_name}<br><small style="color: rgba(255,255,255,0.5)">${refund.email}</small></td>`;
+        html += `<td>${refund.session_name || 'N/A'}</td>`;
+        html += `<td>$${parseFloat(refund.original_amount).toFixed(2)}</td>`;
+        html += `<td>$${parseFloat(refund.refund_amount).toFixed(2)}</td>`;
+        html += `<td><span class="badge badge-info">${refund.refund_type}</span></td>`;
+        html += `<td>${refund.reason}</td>`;
+        html += `<td>${refund.processed_by_name}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function exportRefunds() {
+    const startDate = document.getElementById('historyStartDate').value;
+    const endDate = document.getElementById('historyEndDate').value;
+    window.location.href = `process_refunds.php?action=export_refunds&start_date=${startDate}&end_date=${endDate}`;
+}
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', function() {
+    searchBookings();
+});
+</script>

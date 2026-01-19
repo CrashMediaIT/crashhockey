@@ -9,6 +9,14 @@ requirePermission($pdo, $_SESSION['user_id'], $_SESSION['user_role'], 'edit_syst
 $settings = $pdo->query("SELECT * FROM system_settings")->fetchAll(PDO::FETCH_KEY_PAIR);
 $tax_rate = $settings['tax_rate'] ?? '13.00';
 $tax_name = $settings['tax_name'] ?? 'HST';
+$nextcloud_url = $settings['nextcloud_url'] ?? '';
+$nextcloud_username = $settings['nextcloud_username'] ?? '';
+$nextcloud_password = $settings['nextcloud_password'] ?? '';
+$nextcloud_folder = $settings['nextcloud_receipt_folder'] ?? '/receipts';
+$google_maps_api_key = $settings['google_maps_api_key'] ?? '';
+$mileage_rate_km = $settings['mileage_rate_per_km'] ?? '0.68';
+$mileage_rate_mile = $settings['mileage_rate_per_mile'] ?? '1.10';
+$receipt_scanning_enabled = $settings['receipt_scanning_enabled'] ?? '0';
 ?>
 
 <div class="dash-content">
@@ -216,5 +224,155 @@ $tax_name = $settings['tax_name'] ?? 'HST';
                 <p>Coming soon</p>
             </div>
         </div>
+
+        <!-- Nextcloud Configuration -->
+        <div class="setting-card">
+            <h3><i class="fas fa-cloud"></i> Nextcloud Integration</h3>
+            <p>Configure automatic receipt scanning from Nextcloud</p>
+
+            <form id="nextcloudForm">
+                <?= csrfTokenInput() ?>
+
+                <div class="form-group">
+                    <label>Nextcloud URL</label>
+                    <input type="url" name="nextcloud_url" value="<?= htmlspecialchars($nextcloud_url) ?>" 
+                           placeholder="https://your-nextcloud.com">
+                    <div class="input-hint">Full URL to your Nextcloud instance</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="nextcloud_username" value="<?= htmlspecialchars($nextcloud_username) ?>" 
+                           placeholder="username">
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="nextcloud_password" value="<?= htmlspecialchars($nextcloud_password) ?>" 
+                           placeholder="••••••••">
+                    <div class="input-hint">App password recommended</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Receipt Folder Path</label>
+                    <input type="text" name="nextcloud_receipt_folder" value="<?= htmlspecialchars($nextcloud_folder) ?>" 
+                           placeholder="/receipts">
+                    <div class="input-hint">Folder path where receipts are stored</div>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" name="receipt_scanning_enabled" value="1" 
+                               <?= $receipt_scanning_enabled == '1' ? 'checked' : '' ?>
+                               style="width: auto;">
+                        Enable Automatic Scanning
+                    </label>
+                </div>
+
+                <button type="button" onclick="testNextcloud()" class="btn-save" style="margin-bottom: 10px; background: #3b82f6;">
+                    <i class="fas fa-plug"></i> Test Connection
+                </button>
+
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save Nextcloud Settings
+                </button>
+            </form>
+        </div>
+
+        <!-- Google Maps API -->
+        <div class="setting-card">
+            <h3><i class="fas fa-map"></i> Google Maps API</h3>
+            <p>Configure Google Maps for mileage tracking</p>
+
+            <form action="process_settings.php" method="POST">
+                <?= csrfTokenInput() ?>
+                <input type="hidden" name="action" value="update_google_maps">
+
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" name="google_maps_api_key" value="<?= htmlspecialchars($google_maps_api_key) ?>" 
+                           placeholder="AIza...">
+                    <div class="input-hint">Get your API key from Google Cloud Console</div>
+                </div>
+
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save API Key
+                </button>
+            </form>
+        </div>
+
+        <!-- Mileage Rates -->
+        <div class="setting-card">
+            <h3><i class="fas fa-car"></i> Mileage Rates</h3>
+            <p>Set reimbursement rates for mileage tracking</p>
+
+            <form action="process_settings.php" method="POST">
+                <?= csrfTokenInput() ?>
+                <input type="hidden" name="action" value="update_mileage_rates">
+
+                <div class="form-group">
+                    <label>Rate per Kilometer ($)</label>
+                    <input type="number" name="mileage_rate_per_km" value="<?= htmlspecialchars($mileage_rate_km) ?>" 
+                           step="0.01" min="0" placeholder="0.68">
+                    <div class="input-hint">Standard rate per kilometer</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Rate per Mile ($)</label>
+                    <input type="number" name="mileage_rate_per_mile" value="<?= htmlspecialchars($mileage_rate_mile) ?>" 
+                           step="0.01" min="0" placeholder="1.10">
+                    <div class="input-hint">Standard rate per mile</div>
+                </div>
+
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save Mileage Rates
+                </button>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+document.getElementById('nextcloudForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('action', 'update_nextcloud');
+    
+    try {
+        const response = await fetch('process_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.href = '?page=settings&success=1';
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error saving settings: ' + error.message);
+    }
+});
+
+async function testNextcloud() {
+    const formData = new FormData(document.getElementById('nextcloudForm'));
+    formData.append('action', 'test_nextcloud');
+    
+    try {
+        const response = await fetch('process_settings.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✓ Connection successful!\n\nFound ' + result.file_count + ' files in receipt folder.');
+        } else {
+            alert('✗ Connection failed:\n\n' + result.message);
+        }
+    } catch (error) {
+        alert('Error testing connection: ' + error.message);
+    }
+}
+</script>
