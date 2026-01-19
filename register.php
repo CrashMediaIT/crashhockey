@@ -1,10 +1,15 @@
 <?php
 session_start();
+require 'security.php';
+
 // If already logged in, redirect to dashboard
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     header("Location: dashboard.php");
     exit();
 }
+
+// Set security headers
+setSecurityHeaders();
 ?>
 
 <!DOCTYPE html>
@@ -170,6 +175,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             <?php endif; ?>
 
             <form action="process_register.php" method="POST">
+                <?= csrfTokenInput() ?>
                 
                 <div class="form-row">
                     <div class="input-box">

@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<?php
+require_once 'security.php';
+setSecurityHeaders();
+?>
 
     <header>
         <nav class="container nav-flex">

@@ -7,6 +7,10 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();
 require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/security.php';
+
+// Set security headers
+setSecurityHeaders();
 
 if (!isset($_SESSION['logged_in'])) { header("Location: login.php"); exit(); }
 
@@ -15,7 +19,7 @@ $user_role = $_SESSION['user_role'] ?? 'athlete';
 $user_name = $_SESSION['user_name'] ?? 'Guest';
 
 $isAdmin   = ($user_role === 'admin');
-$isCoach   = ($user_role === 'coach');
+$isCoach   = ($user_role === 'coach' || $user_role === 'coach_plus');
 
 $page = $_GET['page'] ?? 'home';
 
