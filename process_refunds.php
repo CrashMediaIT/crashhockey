@@ -29,12 +29,12 @@ try {
             $query = "
                 SELECT b.*, u.email, u.first_name, u.last_name,
                        s.session_name, s.session_date, s.session_time,
-                       CONCAT(a.first_name, ' ', a.last_name) as athlete_name
+                       CONCAT(bf.first_name, ' ', bf.last_name) as athlete_name
                 FROM bookings b
                 JOIN users u ON b.user_id = u.id
                 LEFT JOIN sessions s ON b.session_id = s.id
-                LEFT JOIN athletes a ON b.athlete_id = a.id
-                WHERE b.payment_status = 'paid'
+                LEFT JOIN users bf ON b.booked_for_user_id = bf.id
+                WHERE b.status = 'paid'
             ";
             
             $params = [];
@@ -78,7 +78,7 @@ try {
                 FROM bookings b
                 JOIN users u ON b.user_id = u.id
                 LEFT JOIN sessions s ON b.session_id = s.id
-                WHERE b.id = ? AND b.payment_status = 'paid'
+                WHERE b.id = ? AND b.status = 'paid'
             ");
             $booking_stmt->execute([$booking_id]);
             $booking = $booking_stmt->fetch();
@@ -134,9 +134,10 @@ try {
             
             // Update booking status
             if ($refund_type === 'full') {
-                $pdo->prepare("UPDATE bookings SET payment_status = 'refunded' WHERE id = ?")->execute([$booking_id]);
+                $pdo->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?")->execute([$booking_id]);
             } else {
-                $pdo->prepare("UPDATE bookings SET payment_status = 'partially_refunded' WHERE id = ?")->execute([$booking_id]);
+                // Keep as 'paid' for partial refunds
+                $pdo->prepare("UPDATE bookings SET status = 'paid' WHERE id = ?")->execute([$booking_id]);
             }
             
             // If package credit purchase, add credits back

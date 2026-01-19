@@ -175,7 +175,7 @@ try {
                        CONCAT(a.first_name, ' ', a.last_name) as athlete_name
                 FROM mileage_logs ml
                 LEFT JOIN users u ON ml.user_id = u.id
-                LEFT JOIN athletes a ON ml.athlete_id = a.id
+                LEFT JOIN users a ON ml.athlete_id = a.id
                 WHERE ml.trip_date BETWEEN ? AND ?
                 ORDER BY ml.trip_date DESC
             ");
@@ -215,7 +215,7 @@ try {
                        GROUP_CONCAT(ms.address ORDER BY ms.stop_order SEPARATOR ' → ') as route
                 FROM mileage_logs ml
                 LEFT JOIN users u ON ml.user_id = u.id
-                LEFT JOIN athletes a ON ml.athlete_id = a.id
+                LEFT JOIN users a ON ml.athlete_id = a.id
                 LEFT JOIN mileage_stops ms ON ml.id = ms.mileage_log_id
                 WHERE ml.trip_date BETWEEN ? AND ?
                 GROUP BY ml.id

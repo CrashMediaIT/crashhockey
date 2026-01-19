@@ -2,7 +2,7 @@
 /**
  * Nextcloud Receipt Scanner - Background Job
  * Run this script every 5 minutes via cron
- * Example: */5 * * * * /usr/bin/php /path/to/cron_receipt_scanner.php
+ * Example: *//* 5 * * * * /usr/bin/php /path/to/cron_receipt_scanner.php
  */
 
 require_once __DIR__ . '/db_config.php';
@@ -195,12 +195,12 @@ function parseReceiptOCR($ocr_text) {
  */
 function createExpenseFromReceipt($pdo, $data, $receipt_file) {
     // Get default category for cloud receipts
-    $category_stmt = $pdo->query("SELECT id FROM expense_categories WHERE category_name = 'Cloud Receipts' LIMIT 1");
+    $category_stmt = $pdo->query("SELECT id FROM expense_categories WHERE name = 'Cloud Receipts' LIMIT 1");
     $category = $category_stmt->fetch();
     
     if (!$category) {
         // Create category if doesn't exist
-        $pdo->exec("INSERT INTO expense_categories (category_name, description) VALUES ('Cloud Receipts', 'Auto-imported from Nextcloud')");
+        $pdo->exec("INSERT INTO expense_categories (name, description) VALUES ('Cloud Receipts', 'Auto-imported from Nextcloud')");
         $category_id = $pdo->lastInsertId();
     } else {
         $category_id = $category['id'];

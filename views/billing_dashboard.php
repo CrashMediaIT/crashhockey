@@ -16,7 +16,7 @@ $income_stmt = $pdo->prepare("
         COUNT(*) as total_bookings,
         SUM(amount_paid) as total_income
     FROM bookings
-    WHERE payment_status = 'paid'
+    WHERE status = 'paid'
     AND DATE(created_at) BETWEEN ? AND ?
 ");
 $income_stmt->execute([$start_date, $end_date]);
@@ -52,7 +52,7 @@ $chart_data_stmt = $pdo->query("
         DATE_FORMAT(created_at, '%Y-%m') as month,
         SUM(amount_paid) as income
     FROM bookings
-    WHERE payment_status = 'paid'
+    WHERE status = 'paid'
     AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
     GROUP BY DATE_FORMAT(created_at, '%Y-%m')
     ORDER BY month
@@ -72,7 +72,7 @@ $expenses_by_month = $chart_expenses_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Get expense breakdown by category
 $category_stmt = $pdo->prepare("
-    SELECT ec.category_name, SUM(e.total_amount) as total
+    SELECT ec.name as category_name, SUM(e.total_amount) as total
     FROM expenses e
     JOIN expense_categories ec ON e.category_id = ec.id
     WHERE DATE(e.expense_date) BETWEEN ? AND ?
@@ -88,7 +88,7 @@ $recent_income_stmt = $pdo->prepare("
     FROM bookings b
     JOIN users u ON b.user_id = u.id
     LEFT JOIN sessions s ON b.session_id = s.id
-    WHERE b.payment_status = 'paid'
+    WHERE b.status = 'paid'
     AND DATE(b.created_at) BETWEEN ? AND ?
     ORDER BY b.created_at DESC
     LIMIT 10
@@ -98,7 +98,7 @@ $recent_income = $recent_income_stmt->fetchAll();
 
 // Get recent expenses
 $recent_expenses_stmt = $pdo->prepare("
-    SELECT e.*, ec.category_name
+    SELECT e.*, ec.name as category_name
     FROM expenses e
     JOIN expense_categories ec ON e.category_id = ec.id
     WHERE DATE(e.expense_date) BETWEEN ? AND ?
@@ -445,7 +445,7 @@ $pending_refunds = $pending_refunds_stmt->fetchAll();
                                 </td>
                                 <td>
                                     <span style="padding: 4px 10px; background: #10b981; color: white; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                        <?= ucfirst($income['payment_status']) ?>
+                                        <?= ucfirst($income['status']) ?>
                                     </span>
                                 </td>
                             </tr>
