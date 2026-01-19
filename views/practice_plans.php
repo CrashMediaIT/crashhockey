@@ -389,6 +389,11 @@ $focus_areas = $pdo->query("SELECT DISTINCT focus_area FROM practice_plans WHERE
         border: 1px solid #ef4444;
         color: #ef4444;
     }
+    .alert-info {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid #3b82f6;
+        color: #3b82f6;
+    }
     .share-link-container {
         background: #06080b;
         border: 1px solid #1e293b;
@@ -600,7 +605,11 @@ $focus_areas = $pdo->query("SELECT DISTINCT focus_area FROM practice_plans WHERE
                     </div>
                     <div class="available-drills" id="availableDrills">
                         <?php foreach ($drills as $drill): ?>
-                            <div class="drill-item" onclick="addDrill(<?= $drill['id'] ?>, '<?= htmlspecialchars(addslashes($drill['title'])) ?>', <?= $drill['duration_minutes'] ?? 10 ?>)">
+                            <div class="drill-item" 
+                                 data-drill-id="<?= $drill['id'] ?>" 
+                                 data-drill-title="<?= htmlspecialchars($drill['title']) ?>" 
+                                 data-drill-duration="<?= $drill['duration_minutes'] ?? 10 ?>"
+                                 onclick="addDrillFromData(this)">
                                 <div class="drill-item-info">
                                     <div class="drill-item-title"><?= htmlspecialchars($drill['title']) ?></div>
                                     <div class="drill-item-meta">
@@ -608,7 +617,7 @@ $focus_areas = $pdo->query("SELECT DISTINCT focus_area FROM practice_plans WHERE
                                         <?= $drill['duration_minutes'] ? $drill['duration_minutes'] . ' min' : '' ?>
                                     </div>
                                 </div>
-                                <button type="button" class="btn-icon" onclick="event.stopPropagation(); addDrill(<?= $drill['id'] ?>, '<?= htmlspecialchars(addslashes($drill['title'])) ?>', <?= $drill['duration_minutes'] ?? 10 ?>)">
+                                <button type="button" class="btn-icon" onclick="event.stopPropagation(); addDrillFromData(this.parentElement)">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
@@ -675,6 +684,20 @@ $focus_areas = $pdo->query("SELECT DISTINCT focus_area FROM practice_plans WHERE
 <script>
 let selectedDrills = [];
 
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-success';
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert ' + alertClass;
+    alertDiv.textContent = message;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '10000';
+    alertDiv.style.minWidth = '300px';
+    document.body.appendChild(alertDiv);
+    setTimeout(() => alertDiv.remove(), 3000);
+}
+
 function openPlanModal() {
     document.getElementById('planModal').classList.add('active');
     document.getElementById('planModalTitle').textContent = 'Create Practice Plan';
@@ -694,7 +717,8 @@ function openShareModal(planId, shareToken) {
     document.getElementById('removeSharePlanId').value = planId;
     
     if (shareToken) {
-        const shareUrl = window.location.origin + '/practice_plan_share.php?token=' + shareToken;
+        const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.php', '');
+        const shareUrl = baseUrl + 'practice_plan_share.php?token=' + shareToken;
         document.getElementById('shareLinkInput').value = shareUrl;
         document.getElementById('shareContent').style.display = 'none';
         document.getElementById('shareLinkDisplay').style.display = 'block';
@@ -711,14 +735,31 @@ function closeShareModal() {
 function copyShareLink() {
     const input = document.getElementById('shareLinkInput');
     input.select();
-    document.execCommand('copy');
-    alert('Share link copied to clipboard!');
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => {
+            showNotification('Share link copied to clipboard!', 'success');
+        }).catch(() => {
+            document.execCommand('copy');
+            showNotification('Share link copied to clipboard!', 'success');
+        });
+    } else {
+        document.execCommand('copy');
+        showNotification('Share link copied to clipboard!', 'success');
+    }
+}
+
+function addDrillFromData(element) {
+    const drillId = parseInt(element.dataset.drillId);
+    const drillTitle = element.dataset.drillTitle;
+    const defaultDuration = parseInt(element.dataset.drillDuration) || 10;
+    addDrill(drillId, drillTitle, defaultDuration);
 }
 
 function addDrill(drillId, drillTitle, defaultDuration) {
     // Check if already added
     if (selectedDrills.find(d => d.drill_id === drillId)) {
-        alert('This drill is already in your plan');
+        showNotification('This drill is already in your plan', 'error');
         return;
     }
     
@@ -804,12 +845,12 @@ function filterDrills() {
 
 function viewPlan(id) {
     // In a real implementation, this would show a detailed view
-    alert('View plan details (implement detailed view page)');
+    showNotification('View plan details (implement detailed view page)', 'info');
 }
 
 function editPlan(id) {
     // In a real implementation, fetch plan data via AJAX and populate form
-    alert('Edit functionality requires AJAX implementation to load existing plan data');
+    showNotification('Edit functionality requires AJAX implementation to load existing plan data', 'info');
 }
 
 function applyFilters() {
