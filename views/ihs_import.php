@@ -124,6 +124,36 @@ requirePermission($pdo, $user_id, $user_role, 'import_from_ihs');
     <h1 class="page-title"><i class="fas fa-file-import"></i> IHS Import</h1>
 </div>
 
+<?php if (isset($_GET['status'])): ?>
+    <div class="alert alert-success">
+        <?php
+        if ($_GET['status'] === 'drills_imported') {
+            $count = $_GET['count'] ?? 0;
+            $skipped = $_GET['skipped'] ?? 0;
+            echo "<i class='fas fa-check-circle'></i> Successfully imported $count drill(s)";
+            if ($skipped > 0) echo ". Skipped $skipped duplicate(s)";
+            echo ".";
+        } elseif ($_GET['status'] === 'plan_imported') {
+            echo "<i class='fas fa-check-circle'></i> Practice plan imported successfully!";
+        }
+        ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert alert-error" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;">
+        <?php
+        $errors = [
+            'no_data' => 'No data provided. Please paste your import data.',
+            'invalid_json' => 'Invalid JSON format. Please check your data.',
+            'missing_title' => 'Practice plan title is required.',
+            'import_failed' => 'Import failed. Please check your data format and try again.'
+        ];
+        echo "<i class='fas fa-exclamation-triangle'></i> " . ($errors[$_GET['error']] ?? 'An error occurred.');
+        ?>
+    </div>
+<?php endif; ?>
+
 <div class="info-box">
     <i class="fas fa-info-circle"></i>
     <strong>About IHS Import:</strong> This feature allows you to import drills and practice plans from 

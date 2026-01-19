@@ -172,8 +172,10 @@ function setSecurityHeaders() {
     // Referrer Policy
     header('Referrer-Policy: strict-origin-when-cross-origin');
     
-    // Content Security Policy
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' https:;");
+    // Content Security Policy - Restrictive but allows necessary external resources
+    // Note: 'unsafe-inline' is used for inline styles in legacy code. 
+    // TODO: Migrate inline styles to external files and remove unsafe-inline
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' https:; frame-src 'none';");
     
     // HTTPS enforcement (uncomment when using HTTPS)
     // header('Strict-Transport-Security: max-age=31536000; includeSubDomains');

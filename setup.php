@@ -59,13 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 1) {
             if (file_put_contents($config_file, $env_content) === false) {
                 $error = 'Failed to write configuration file. Check directory permissions.';
             } else {
-                // Move to step 2
-                $_SESSION['setup_pdo'] = serialize([
-                    'host' => $db_host,
-                    'name' => $db_name,
-                    'user' => $db_user,
-                    'pass' => $db_pass
-                ]);
+                // Move to step 2 (credentials stored in file, not session)
                 $step = 2;
             }
             
@@ -77,48 +71,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 1) {
 
 // Step 2: Initialize database tables
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
-    session_start();
-    if (!isset($_SESSION['setup_pdo'])) {
-        die('Invalid setup session. Please start over.');
-    }
-    
-    $db_creds = unserialize($_SESSION['setup_pdo']);
-    
-    try {
-        $pdo = new PDO(
-            "mysql:host={$db_creds['host']};dbname={$db_creds['name']};charset=utf8mb4",
-            $db_creds['user'],
-            $db_creds['pass']
-        );
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Read credentials from config file
+    if (!file_exists($config_file)) {
+        $error = 'Configuration file not found. Please go back to step 1.';
+    } else {
+        $env_data = file_get_contents($config_file);
+        preg_match('/DB_HOST=(.+)/', $env_data, $host_match);
+        preg_match('/DB_NAME=(.+)/', $env_data, $name_match);
+        preg_match('/DB_USER=(.+)/', $env_data, $user_match);
+        preg_match('/DB_PASS_ENCRYPTED=(.+)/', $env_data, $pass_match);
+        preg_match('/ENCRYPTION_KEY_HASH=(.+)/', $env_data, $key_match);
         
-        // Read and execute schema file
-        $schema_file = __DIR__ . '/schema.sql';
-        if (!file_exists($schema_file)) {
-            $error = 'Schema file not found. Please ensure schema.sql exists.';
+        if (!$host_match || !$name_match || !$user_match) {
+            $error = 'Invalid configuration file. Please start over.';
         } else {
-            $schema = file_get_contents($schema_file);
+            $db_host = trim($host_match[1]);
+            $db_name = trim($name_match[1]);
+            $db_user = trim($user_match[1]);
             
-            // Split by semicolons and execute each statement
-            $statements = array_filter(array_map('trim', explode(';', $schema)));
-            
-            foreach ($statements as $statement) {
-                if (!empty($statement) && strpos($statement, '--') !== 0) {
-                    $pdo->exec($statement);
+            // Decrypt password if encrypted
+            if ($pass_match && $key_match) {
+                try {
+                    $encrypted_data = trim($pass_match[1]);
+                    $key_hash = hex2bin(trim($key_match[1]));
+                    
+                    $parts = explode('::', base64_decode($encrypted_data), 2);
+                    if (count($parts) === 2) {
+                        $iv = $parts[0];
+                        $encrypted = $parts[1];
+                        $db_pass = openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
+                    } else {
+                        $db_pass = '';
+                    }
+                } catch (Exception $e) {
+                    $db_pass = '';
                 }
+            } else {
+                $db_pass = '';
             }
-            
-            // Create lock file to prevent re-running
-            file_put_contents($lock_file, date('Y-m-d H:i:s'));
-            
-            // Clear session
-            unset($_SESSION['setup_pdo']);
-            
-            $success = true;
+    
+            try {
+                $pdo = new PDO(
+                    "mysql:host=$db_host;dbname=$db_name;charset=utf8mb4",
+                    $db_user,
+                    $db_pass
+                );
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                // Read and execute schema file
+                $schema_file = __DIR__ . '/schema.sql';
+                if (!file_exists($schema_file)) {
+                    $error = 'Schema file not found. Please ensure schema.sql exists.';
+                } else {
+                    $schema = file_get_contents($schema_file);
+                    
+                    // Split by semicolons and execute each statement
+                    $statements = array_filter(array_map('trim', explode(';', $schema)));
+                    
+                    foreach ($statements as $statement) {
+                        if (!empty($statement) && strpos($statement, '--') !== 0) {
+                            $pdo->exec($statement);
+                        }
+                    }
+                    
+                    // Create lock file to prevent re-running
+                    file_put_contents($lock_file, date('Y-m-d H:i:s'));
+                    
+                    $success = true;
+                }
+                
+            } catch (PDOException $e) {
+                $error = 'Database initialization failed: ' . $e->getMessage();
+            }
         }
-        
-    } catch (PDOException $e) {
-        $error = 'Database initialization failed: ' . $e->getMessage();
     }
 }
 ?>
