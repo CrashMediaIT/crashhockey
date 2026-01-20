@@ -64,7 +64,11 @@ $allowed_pages = [
     'refunds'             => 'views/refunds.php',
     'settings'            => 'views/settings.php',
     'manage_athletes'     => 'views/manage_athletes.php',
-    'goals'               => 'views/goals.php'
+    'goals'               => 'views/goals.php',
+    'evaluations_goals'   => 'views/evaluations_goals.php',
+    'evaluations_skills'  => 'views/evaluations_skills.php',
+    'admin_settings'      => 'views/admin_settings.php',
+    'admin_eval_framework' => 'views/admin_eval_framework.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
@@ -199,6 +203,15 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         </nav>
     </div>
 
+    <div class="nav-group">
+        <span class="nav-label">Goals & Evaluations</span>
+        <nav class="nav-menu">
+            <a href="?page=goals" class="nav-link <?= $page=='goals'?'active':'' ?>"><i class="fa-solid fa-bullseye"></i> Goals Tracker</a>
+            <a href="?page=evaluations_goals" class="nav-link <?= $page=='evaluations_goals'?'active':'' ?>"><i class="fa-solid fa-tasks"></i> Goal Evaluations</a>
+            <a href="?page=evaluations_skills" class="nav-link <?= $page=='evaluations_skills'?'active':'' ?>"><i class="fa-solid fa-star"></i> Skills Evaluations</a>
+        </nav>
+    </div>
+
     <?php if($isParent): ?>
     <div class="nav-group">
         <span class="nav-label">Parent Management</span>
@@ -233,6 +246,8 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_discounts" class="nav-link <?= $page=='admin_discounts'?'active':'' ?>"><i class="fa-solid fa-percent"></i> Discounts</a>
             <a href="?page=admin_packages" class="nav-link <?= $page=='admin_packages'?'active':'' ?>"><i class="fa-solid fa-box-open"></i> Packages</a>
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
+            <a href="?page=admin_eval_framework" class="nav-link <?= $page=='admin_eval_framework'?'active':'' ?>"><i class="fa-solid fa-list-check"></i> Eval Framework</a>
+            <a href="?page=admin_settings" class="nav-link <?= $page=='admin_settings'?'active':'' ?>"><i class="fa-solid fa-cog"></i> System Settings</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
         </nav>
     </div>
