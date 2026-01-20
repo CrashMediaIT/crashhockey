@@ -424,8 +424,15 @@ $sessions = $sessions_stmt->fetchAll();
 </div>
 
 <script>
-let currentBookingAmount = 0;
-let upcomingSessions = [];
+const RefundSystem = {
+    currentBookingAmount: 0,
+    upcomingSessions: [],
+    
+    init: function() {
+        this.searchBookings();
+        this.loadUpcomingSessions();
+    }
+};
 
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -506,7 +513,7 @@ async function loadUpcomingSessions() {
         const response = await fetch('process_refunds.php?action=get_upcoming_sessions');
         const result = await response.json();
         if (result.success) {
-            upcomingSessions = result.sessions;
+            RefundSystem.upcomingSessions = result.sessions;
         }
     } catch (error) {
         console.error('Failed to load upcoming sessions:', error);
@@ -537,7 +544,7 @@ function updateMethodFields() {
         creditExpiryField.style.display = 'none';
         exchangeSessionField.style.display = 'none';
         refundAmount.required = true;
-        refundAmount.value = currentBookingAmount.toFixed(2);
+        refundAmount.value = RefundSystem.currentBookingAmount.toFixed(2);
     } else if (method === 'credit') {
         submitBtn.innerHTML = '<i class="fas fa-coins"></i> Issue Store Credit';
         amountLabel.textContent = 'Credit Amount';
@@ -545,7 +552,7 @@ function updateMethodFields() {
         creditExpiryField.style.display = 'block';
         exchangeSessionField.style.display = 'none';
         refundAmount.required = true;
-        refundAmount.value = currentBookingAmount.toFixed(2);
+        refundAmount.value = RefundSystem.currentBookingAmount.toFixed(2);
     } else if (method === 'exchange') {
         submitBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Process Exchange';
         amountField.style.display = 'none';
@@ -556,7 +563,7 @@ function updateMethodFields() {
         // Populate exchange session dropdown
         const select = document.getElementById('exchangeSession');
         select.innerHTML = '<option value="">-- Select Session --</option>';
-        upcomingSessions.forEach(session => {
+        RefundSystem.upcomingSessions.forEach(session => {
             select.innerHTML += `<option value="${session.id}">
                 ${session.title} - ${new Date(session.session_date).toLocaleDateString()} ${session.session_time}
             </option>`;
@@ -578,7 +585,7 @@ function openRefundModal(booking) {
     document.getElementById('refundOriginalAmount').value = `$${parseFloat(booking.amount_paid).toFixed(2)}`;
     document.getElementById('refundAmount').value = parseFloat(booking.amount_paid).toFixed(2);
     
-    currentBookingAmount = parseFloat(booking.amount_paid);
+    RefundSystem.currentBookingAmount = parseFloat(booking.amount_paid);
     
     // Reset to refund method
     document.getElementById('methodRefund').checked = true;
@@ -712,7 +719,6 @@ function exportRefunds() {
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', function() {
-    searchBookings();
-    loadUpcomingSessions();
+    RefundSystem.init();
 });
 </script>

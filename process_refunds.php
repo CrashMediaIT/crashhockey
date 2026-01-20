@@ -270,15 +270,15 @@ try {
             
             $stmt = $pdo->prepare("
                 SELECT r.*, u.email, u.first_name, u.last_name,
-                       s.session_name, s.session_date,
+                       s.title as session_name, s.session_date,
                        CONCAT(admin.first_name, ' ', admin.last_name) as processed_by_name
                 FROM refunds r
                 JOIN users u ON r.user_id = u.id
                 LEFT JOIN bookings b ON r.booking_id = b.id
                 LEFT JOIN sessions s ON b.session_id = s.id
-                LEFT JOIN users admin ON r.processed_by = admin.id
-                WHERE DATE(r.processed_at) BETWEEN ? AND ?
-                ORDER BY r.processed_at DESC
+                LEFT JOIN users admin ON r.refunded_by = admin.id
+                WHERE DATE(r.refund_date) BETWEEN ? AND ?
+                ORDER BY r.refund_date DESC
             ");
             $stmt->execute([$start_date, $end_date]);
             $refunds = $stmt->fetchAll();
@@ -292,15 +292,15 @@ try {
             
             $stmt = $pdo->prepare("
                 SELECT r.*, u.email, u.first_name, u.last_name,
-                       s.session_name, s.session_date,
+                       s.title as session_name, s.session_date,
                        CONCAT(admin.first_name, ' ', admin.last_name) as processed_by_name
                 FROM refunds r
                 JOIN users u ON r.user_id = u.id
                 LEFT JOIN bookings b ON r.booking_id = b.id
                 LEFT JOIN sessions s ON b.session_id = s.id
-                LEFT JOIN users admin ON r.processed_by = admin.id
-                WHERE DATE(r.processed_at) BETWEEN ? AND ?
-                ORDER BY r.processed_at DESC
+                LEFT JOIN users admin ON r.refunded_by = admin.id
+                WHERE DATE(r.refund_date) BETWEEN ? AND ?
+                ORDER BY r.refund_date DESC
             ");
             $stmt->execute([$start_date, $end_date]);
             $refunds = $stmt->fetchAll();

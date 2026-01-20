@@ -66,12 +66,14 @@ $expired_credits = $expired_credits_stmt->fetchAll();
 // Get all users for admin search
 $all_users = [];
 if ($user_role === 'admin') {
-    $all_users = $pdo->query("
+    $all_users_stmt = $pdo->prepare("
         SELECT id, first_name, last_name, email 
         FROM users 
         WHERE role IN ('athlete', 'parent')
         ORDER BY first_name, last_name
-    ")->fetchAll();
+    ");
+    $all_users_stmt->execute();
+    $all_users = $all_users_stmt->fetchAll();
 }
 ?>
 

@@ -613,26 +613,33 @@ $available_credits = floatval($user_credits_stmt->fetchColumn());
 <?php endif; ?>
 
 <script>
-const taxRate = <?= floatval($tax_rate) ?>;
-const availableCredits = <?= floatval($available_credits) ?>;
+const CreditSystem = {
+    taxRate: <?= floatval($tax_rate) ?>,
+    availableCredits: <?= floatval($available_credits) ?>,
+    sessionPricePerAthlete: 0,
+    
+    updateSinglePrice: function(sessionId, sessionPrice, applyCredit) {
+        const priceInfo = document.getElementById('price_info_' + sessionId);
+        
+        if (applyCredit) {
+            const creditToUse = Math.min(this.availableCredits, sessionPrice);
+            const afterCredit = Math.max(0, sessionPrice - creditToUse);
+            const tax = afterCredit * (this.taxRate / 100);
+            const total = afterCredit + tax;
+            
+            if (total <= 0.01) {
+                priceInfo.innerHTML = '<strong style="color: #10b981;">✓ Free with credits!</strong>';
+            } else {
+                priceInfo.innerHTML = 'New total: <strong style="color: #fff;">$' + total.toFixed(2) + '</strong>';
+            }
+        } else {
+            priceInfo.innerHTML = '';
+        }
+    }
+};
 
 function updateSinglePrice(sessionId, sessionPrice, applyCredit) {
-    const priceInfo = document.getElementById('price_info_' + sessionId);
-    
-    if (applyCredit) {
-        const creditToUse = Math.min(availableCredits, sessionPrice);
-        const afterCredit = Math.max(0, sessionPrice - creditToUse);
-        const tax = afterCredit * (taxRate / 100);
-        const total = afterCredit + tax;
-        
-        if (total <= 0.01) {
-            priceInfo.innerHTML = '<strong style="color: #10b981;">✓ Free with credits!</strong>';
-        } else {
-            priceInfo.innerHTML = 'New total: <strong style="color: #fff;">$' + total.toFixed(2) + '</strong>';
-        }
-    } else {
-        priceInfo.innerHTML = '';
-    }
+    CreditSystem.updateSinglePrice(sessionId, sessionPrice, applyCredit);
 }
 
 function applyFilters(select, filterType) {
@@ -649,13 +656,11 @@ function applyFilters(select, filterType) {
 }
 
 <?php if ($isParent && count($managed_athletes) > 0): ?>
-let sessionPricePerAthlete = 0;
-
 function openBookingModal(sessionId, sessionTitle, sessionPrice) {
     document.getElementById('modal_session_id').value = sessionId;
     document.getElementById('modal_session_title').textContent = sessionTitle;
-    sessionPricePerAthlete = sessionPrice;
-    document.getElementById('modal_session_price').textContent = (sessionPrice * (1 + taxRate / 100)).toFixed(2);
+    CreditSystem.sessionPricePerAthlete = sessionPrice;
+    document.getElementById('modal_session_price').textContent = (sessionPrice * (1 + CreditSystem.taxRate / 100)).toFixed(2);
     document.getElementById('bookingModal').classList.add('active');
     
     // Uncheck all checkboxes
@@ -688,11 +693,11 @@ function calculateTotal() {
     
     document.getElementById('priceBreakdown').style.display = 'block';
     
-    const subtotal = sessionPricePerAthlete * numAthletes;
+    const subtotal = CreditSystem.sessionPricePerAthlete * numAthletes;
     const applyCredit = document.getElementById('apply_credits').value === '1';
-    const creditToApply = applyCredit ? Math.min(availableCredits, subtotal) : 0;
+    const creditToApply = applyCredit ? Math.min(CreditSystem.availableCredits, subtotal) : 0;
     const afterCredit = Math.max(0, subtotal - creditToApply);
-    const tax = afterCredit * (taxRate / 100);
+    const tax = afterCredit * (CreditSystem.taxRate / 100);
     const total = afterCredit + tax;
     
     document.getElementById('breakdown_subtotal').textContent = subtotal.toFixed(2);
