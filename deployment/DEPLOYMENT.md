@@ -101,10 +101,11 @@ docker exec -it mariadb mysql -uchroot -p crashhockey
 ## Step 5: Setup linuxserver.io NGINX Container
 
 ```bash
-# Create config directory
-sudo mkdir -p /config
+# Create config directory on HOST
+sudo mkdir -p /portainer/nginx
 
 # Run linuxserver/nginx container with bind mount
+# Host path: /portainer/nginx maps to Container path: /config
 docker run -d \
   --name=nginx \
   --restart=always \
@@ -113,7 +114,7 @@ docker run -d \
   -e TZ=America/Toronto \
   -p 80:80 \
   -p 443:443 \
-  -v /config:/config \
+  -v /portainer/nginx:/config \
   --link mariadb:mariadb \
   lscr.io/linuxserver/nginx:latest
 
@@ -124,19 +125,24 @@ docker ps | grep nginx
 docker logs nginx
 ```
 
-**Important Directory Structure Created:**
-- `/config/www/` - Web root directory
-- `/config/nginx/site-confs/` - NGINX site configurations
-- `/config/php/` - PHP configuration files
-- `/config/log/` - Log files
+**Important Directory Structure (on HOST at /portainer/nginx):**
+- `/portainer/nginx/www/` - Web root directory (maps to `/config/www` in container)
+- `/portainer/nginx/nginx/site-confs/` - NGINX site configurations
+- `/portainer/nginx/php/` - PHP configuration files
+- `/portainer/nginx/log/` - Log files
+
+**Critical Understanding:**
+- **Host path**: `/portainer/nginx` (where files actually exist on Fedora)
+- **Container path**: `/config` (internal container view via bind mount)
+- **Set permissions on HOST** at `/portainer/nginx` paths
 
 ---
 
 ## Step 6: Clone Repository to WWW Folder
 
 ```bash
-# Navigate to NGINX www directory
-cd /config/www
+# Navigate to NGINX www directory ON HOST
+cd /portainer/nginx/www
 
 # Remove default files if they exist
 sudo rm -rf html
@@ -153,10 +159,12 @@ ls -la
 
 ---
 
-## Step 7: Create Missing Folders and Set Permissions
+## Step 7: Create Missing Folders and Set Permissions (ON HOST)
+
+**IMPORTANT:** All permissions must be set on the **HOST** at `/portainer/nginx/` since that's where files actually exist.
 
 ```bash
-# Create required directories
+# Create required directories ON HOST
 sudo mkdir -p /portainer/nginx/www/crashhockey/uploads
 sudo mkdir -p /portainer/nginx/www/crashhockey/sessions
 sudo mkdir -p /portainer/nginx/www/crashhockey/cache
@@ -177,7 +185,24 @@ sudo chmod -R 775 /portainer/nginx/www/crashhockey/sessions
 sudo chmod -R 775 /portainer/nginx/www/crashhockey/cache
 
 # Verify permissions
-ls -la /portainer/nginx/www/crashhockey
+ls -ld /portainer/nginx/www/crashhockey
+# Should show: drwxrwxr-x. 8 911 911 ... /portainer/nginx/www/crashhockey
+
+# CRITICAL FOR FEDORA: Fix SELinux context
+# SELinux blocks container writes by default on Fedora
+sudo chcon -R -t container_file_t /portainer/nginx/www/crashhockey
+sudo chcon -R -t container_file_t /portainer/nginx/log
+
+# Make SELinux changes permanent
+sudo semanage fcontext -a -t container_file_t "/portainer/nginx/www/crashhockey(/.*)?"
+sudo restorecon -R /portainer/nginx/www/crashhockey
+
+# Test write access from INSIDE container
+# Note: Inside container, path is /config (mounted from /portainer/nginx on host)
+docker exec nginx touch /config/www/crashhockey/test.txt && \
+docker exec nginx rm /config/www/crashhockey/test.txt && \
+echo "✅ Write access verified - setup can proceed" || \
+echo "❌ Write access FAILED - check SELinux with: sudo ausearch -m avc -ts recent"
 ```
 
 **Permission Summary:**
@@ -186,22 +211,23 @@ ls -la /portainer/nginx/www/crashhockey
 - **Regular files**: `644` (readable by web server, not writable)
 - **Regular directories**: `755` (traversable by web server)
 - **Owner**: `911:911` (abc user in linuxserver container)
+- **SELinux context**: `container_file_t` (allows container to write)
 
-**If you still get "Failed to write configuration file" error:**
+**If test fails, temporarily disable SELinux for troubleshooting:**
 ```bash
-# Re-apply permissions explicitly
-sudo chmod 775 /config/www/crashhockey
-sudo chown 911:911 /config/www/crashhockey
+# Check SELinux status
+sestatus
 
-# Check current permissions
-ls -ld /config/www/crashhockey
+# Temporarily disable (resets on reboot)
+sudo setenforce 0
 
-# Should show: drwxrwxr-x 911 911
+# Try setup wizard again
+# If it works, SELinux was the issue
 
-# Test write access from inside container
-docker exec nginx touch /config/www/crashhockey/test.txt && \
-docker exec nginx rm /config/www/crashhockey/test.txt && \
-echo "Write access OK" || echo "Write access FAILED"
+# Re-enable SELinux
+sudo setenforce 1
+
+# Then apply proper context as shown above
 ```
 
 ---
@@ -258,7 +284,7 @@ curl -I http://localhost
 **Troubleshooting:**
 - If NGINX won't start, check logs: `docker logs nginx`
 - Test config syntax: `docker exec nginx nginx -t`
-- Check file permissions: `ls -la /config/nginx/site-confs/`
+- Check file permissions: `ls -la /portainer/nginx/nginx/site-confs/`
 
 ---
 
@@ -339,7 +365,7 @@ After deployment, verify everything is working:
 - [ ] **Admin Login Works**: Can login at `/login.php`
 - [ ] **Email Sending Works**: Check Email Logs page
 - [ ] **File Uploads Work**: Try uploading a profile picture
-- [ ] **Permissions Correct**: Check `/config/www/crashhockey` ownership is `911:911`
+- [ ] **Permissions Correct**: Check `/portainer/nginx/www/crashhockey` ownership is `911:911`
 
 ---
 
@@ -349,12 +375,12 @@ After deployment, verify everything is working:
 **Solution:**
 ```bash
 # Ensure root directory is writable
-sudo chmod 775 /config/www/crashhockey
-sudo chown 911:911 /config/www/crashhockey
+sudo chmod 775 /portainer/nginx/www/crashhockey
+sudo chown 911:911 /portainer/nginx/www/crashhockey
 
 # Verify
-ls -ld /config/www/crashhockey
-# Should show: drwxrwxr-x  911 911  /config/www/crashhockey
+ls -ld /portainer/nginx/www/crashhockey
+# Should show: drwxrwxr-x  911 911  /portainer/nginx/www/crashhockey
 ```
 
 ### Issue: "502 Bad Gateway"
@@ -370,7 +396,7 @@ ls -ld /config/www/crashhockey
 3. Check logs:
    ```bash
    docker logs nginx
-   tail -50 /config/log/php-error.log
+   tail -50 /portainer/nginx/log/php-error.log
    ```
 
 ### Issue: "Can't connect to database"
@@ -396,14 +422,14 @@ ls -ld /config/www/crashhockey
 4. For Gmail, ensure you're using an App Password, not your regular password
 5. Check PHP error log:
    ```bash
-   tail -50 /config/log/php-error.log | grep -i mail
+   tail -50 /portainer/nginx/log/php-error.log | grep -i mail
    ```
 
 ### Issue: "Permission denied" errors
 **Solution:**
 ```bash
 # Reset all permissions
-cd /config/www/crashhockey
+cd /portainer/nginx/www/crashhockey
 sudo chown -R 911:911 .
 sudo find . -type d -exec chmod 755 {} \;
 sudo find . -type f -exec chmod 644 {} \;
@@ -450,13 +476,13 @@ docker restart nginx
 ### View Logs
 ```bash
 # NGINX access log
-tail -f /config/log/crashhockey_access.log
+tail -f /portainer/nginx/log/crashhockey_access.log
 
 # NGINX error log
-tail -f /config/log/crashhockey_error.log
+tail -f /portainer/nginx/log/crashhockey_error.log
 
 # PHP error log
-tail -f /config/log/php-error.log
+tail -f /portainer/nginx/log/php-error.log
 
 # Docker container logs
 docker logs nginx --tail 100 -f
@@ -474,7 +500,7 @@ docker exec -i mariadb mysql -uchroot -p crashhockey < backup_20260120.sql
 
 ### Update Application
 ```bash
-cd /config/www/crashhockey
+cd /portainer/nginx/www/crashhockey
 sudo git pull origin main
 sudo chown -R 911:911 .
 docker restart nginx
@@ -523,13 +549,13 @@ Add the following:
 # Crash Hockey Cron Jobs
 
 # Receipt scanner (every 5 minutes)
-docker exec nginx /usr/bin/php /config/www/crashhockey/cron_receipt_scanner.php
+docker exec nginx /usr/bin/php /portainer/nginx/www/crashhockey/cron_receipt_scanner.php
 
 # Notifications (every 10 minutes)
-docker exec nginx /usr/bin/php /config/www/crashhockey/cron_notifications.php
+docker exec nginx /usr/bin/php /portainer/nginx/www/crashhockey/cron_notifications.php
 
 # Credit expiry check (daily at 2 AM)
-docker exec nginx /usr/bin/php /config/www/crashhockey/cron_credit_expiry.php
+docker exec nginx /usr/bin/php /portainer/nginx/www/crashhockey/cron_credit_expiry.php
 ```
 
 Make executable and add to crontab:
@@ -550,14 +576,14 @@ sudo crontab -e
 - **Project Updates**: See `deployment/UPDATES.md` for change history
 - **Quick Reference**: See `/README.md` in repository root
 - **Email Debugging**: Dashboard → System Admin → Email Logs
-- **Error Logs**: `/config/log/` directory
+- **Error Logs**: `/portainer/nginx/log/` directory
 
 For issues during deployment, check:
 1. Docker container status: `docker ps -a`
 2. NGINX logs: `docker logs nginx`
-3. PHP error log: `tail -f /config/log/php-error.log`
+3. PHP error log: `tail -f /portainer/nginx/log/php-error.log`
 4. Database connectivity: `docker exec -it mariadb mysql -uchroot -p crashhockey`
-5. File permissions: `ls -la /config/www/crashhockey`
+5. File permissions: `ls -la /portainer/nginx/www/crashhockey`
 
 ---
 
