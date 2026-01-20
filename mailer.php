@@ -12,7 +12,7 @@ class SmtpMailer {
     public function send($to, $subject, $body, $config) {
         // 1. CONFIGURATION & SANITIZATION
         // Remove 'ssl://' or 'tls://' if accidentally typed in Host field
-        $raw_host = $config['smtp_host'] ?? 'smtp.neo.space';
+        $raw_host = $config['smtp_host'] ?? '';
         $host     = preg_replace('/^ssl:\/\/|^tls:\/\//', '', trim($raw_host));
         
         $port = $config['smtp_port'] ?? '465';
