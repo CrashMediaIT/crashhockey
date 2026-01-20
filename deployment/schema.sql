@@ -36,7 +36,10 @@ CREATE TABLE IF NOT EXISTS `locations` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(255) NOT NULL,
   `city` VARCHAR(100) NOT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `google_place_id` VARCHAR(255) DEFAULT NULL,
+  `image_url` VARCHAR(500) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_place_id` (`google_place_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Age Groups
@@ -1270,4 +1273,74 @@ CREATE TABLE IF NOT EXISTS `team_coach_assignments` (
   INDEX `idx_team` (`team_id`),
   INDEX `idx_season` (`season_id`),
   UNIQUE KEY `unique_coach_team_season` (`coach_id`, `team_id`, `season_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- PHASE 3 FEATURES
+-- =========================================================
+
+-- Reports Table
+CREATE TABLE IF NOT EXISTS `reports` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `report_type` VARCHAR(100) NOT NULL,
+  `generated_by` INT NOT NULL,
+  `parameters` TEXT DEFAULT NULL COMMENT 'JSON encoded parameters',
+  `format` ENUM('pdf', 'csv') NOT NULL DEFAULT 'pdf',
+  `file_path` VARCHAR(500) DEFAULT NULL,
+  `share_token` VARCHAR(64) DEFAULT NULL UNIQUE,
+  `scheduled` BOOLEAN DEFAULT 0,
+  `schedule_frequency` ENUM('daily', 'weekly', 'monthly') DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`generated_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_generated_by` (`generated_by`),
+  INDEX `idx_report_type` (`report_type`),
+  INDEX `idx_share_token` (`share_token`),
+  INDEX `idx_scheduled` (`scheduled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Report Schedules Table
+CREATE TABLE IF NOT EXISTS `report_schedules` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `report_type` VARCHAR(100) NOT NULL,
+  `parameters` TEXT DEFAULT NULL COMMENT 'JSON encoded parameters',
+  `frequency` ENUM('daily', 'weekly', 'monthly') NOT NULL,
+  `format` ENUM('pdf', 'csv') NOT NULL DEFAULT 'pdf',
+  `email_recipients` TEXT DEFAULT NULL COMMENT 'Comma-separated email addresses',
+  `last_run` TIMESTAMP NULL DEFAULT NULL,
+  `next_run` TIMESTAMP NULL DEFAULT NULL,
+  `is_active` BOOLEAN DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_next_run` (`next_run`),
+  INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Security Scans Table
+CREATE TABLE IF NOT EXISTS `security_scans` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `scan_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `vulnerabilities_found` INT DEFAULT 0,
+  `details` LONGTEXT DEFAULT NULL COMMENT 'JSON encoded scan results',
+  `notified_admins` BOOLEAN DEFAULT 0,
+  `scan_status` ENUM('running', 'completed', 'failed') DEFAULT 'completed',
+  `scan_duration` INT DEFAULT NULL COMMENT 'Duration in seconds',
+  INDEX `idx_scan_date` (`scan_date`),
+  INDEX `idx_vulnerabilities` (`vulnerabilities_found`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Database Maintenance Logs Table
+CREATE TABLE IF NOT EXISTS `database_maintenance_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `run_by` INT NOT NULL,
+  `action_type` VARCHAR(100) NOT NULL,
+  `table_name` VARCHAR(100) DEFAULT NULL,
+  `details` TEXT DEFAULT NULL,
+  `status` ENUM('success', 'warning', 'error') DEFAULT 'success',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`run_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_run_by` (`run_by`),
+  INDEX `idx_action_type` (`action_type`),
+  INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -769,7 +769,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Define ALL tables from schema.sql that MUST exist (69 total including new features)
+                // Define ALL tables from schema.sql that MUST exist (76 total including Phase 3)
                 $all_tables = [
                     // Core tables
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
@@ -804,7 +804,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     'goal_evaluations', 'goal_eval_steps', 'goal_eval_progress', 'goal_eval_approvals',
                     // Evaluation Platform - Skills & Abilities
                     'eval_categories', 'eval_skills', 'athlete_evaluations', 'team_evaluations',
-                    'evaluation_scores', 'evaluation_media'
+                    'evaluation_scores', 'evaluation_media',
+                    // Team Coach Role
+                    'seasons', 'team_coach_assignments',
+                    // Phase 3 Features
+                    'reports', 'report_schedules', 'security_scans', 'database_maintenance_logs'
                 ];
                 
                 $existing_tables = [];
