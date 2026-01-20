@@ -209,11 +209,9 @@ if ($user_role === 'parent') {
                 <label class="form-label">Position</label>
                 <select name="position" class="form-input">
                     <option value="">Select Position</option>
-                    <option value="Center" <?= $user_data['position'] === 'Center' ? 'selected' : '' ?>>Center</option>
-                    <option value="Left Wing" <?= $user_data['position'] === 'Left Wing' ? 'selected' : '' ?>>Left Wing</option>
-                    <option value="Right Wing" <?= $user_data['position'] === 'Right Wing' ? 'selected' : '' ?>>Right Wing</option>
-                    <option value="Defense" <?= $user_data['position'] === 'Defense' ? 'selected' : '' ?>>Defense</option>
-                    <option value="Goalie" <?= $user_data['position'] === 'Goalie' ? 'selected' : '' ?>>Goalie</option>
+                    <option value="forward" <?= $user_data['position'] === 'forward' ? 'selected' : '' ?>>Forward</option>
+                    <option value="defense" <?= $user_data['position'] === 'defense' ? 'selected' : '' ?>>Defense</option>
+                    <option value="goalie" <?= $user_data['position'] === 'goalie' ? 'selected' : '' ?>>Goalie</option>
                 </select>
             </div>
             
@@ -227,6 +225,44 @@ if ($user_role === 'parent') {
                 <label class="form-label">Primary Arena</label>
                 <input type="text" name="primary_arena" class="form-input" 
                        value="<?= htmlspecialchars($user_data['primary_arena'] ?? '') ?>">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Physical Stats -->
+    <div class="section-card">
+        <h2 class="section-title"><i class="fas fa-ruler-vertical"></i> Physical Stats</h2>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Weight (lbs)</label>
+                <input type="number" name="weight" class="form-input" 
+                       value="<?= $user_data['weight'] ?? '' ?>" placeholder="0">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Height (cm)</label>
+                <input type="number" name="height" class="form-input" 
+                       value="<?= $user_data['height'] ?? '' ?>" placeholder="0">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Shooting Hand</label>
+                <select name="shooting_hand" class="form-input">
+                    <option value="">Select Hand</option>
+                    <option value="left" <?= ($user_data['shooting_hand'] ?? '') === 'left' ? 'selected' : '' ?>>Left</option>
+                    <option value="right" <?= ($user_data['shooting_hand'] ?? '') === 'right' ? 'selected' : '' ?>>Right</option>
+                    <option value="ambidextrous" <?= ($user_data['shooting_hand'] ?? '') === 'ambidextrous' ? 'selected' : '' ?>>Ambidextrous</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Catching Hand (Goalies)</label>
+                <select name="catching_hand" class="form-input">
+                    <option value="">Select Hand</option>
+                    <option value="regular" <?= ($user_data['catching_hand'] ?? '') === 'regular' ? 'selected' : '' ?>>Regular</option>
+                    <option value="full_right" <?= ($user_data['catching_hand'] ?? '') === 'full_right' ? 'selected' : '' ?>>Full Right</option>
+                </select>
             </div>
         </div>
     </div>

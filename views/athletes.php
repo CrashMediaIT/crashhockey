@@ -248,7 +248,7 @@ $athletes = $athletes_stmt->fetchAll();
                         <?php if ($athlete['position']): ?>
                             <div class="athlete-meta">
                                 <i class="fas fa-hockey-puck"></i>
-                                <?= htmlspecialchars($athlete['position']) ?>
+                                <?= htmlspecialchars(ucfirst($athlete['position'])) ?>
                             </div>
                         <?php endif; ?>
                         <?php if ($athlete['birth_date']): ?>
@@ -260,10 +260,20 @@ $athletes = $athletes_stmt->fetchAll();
                                 ?>
                             </div>
                         <?php endif; ?>
-                        <div class="athlete-meta">
-                            <i class="fas fa-envelope"></i>
-                            <?= htmlspecialchars($athlete['email']) ?>
-                        </div>
+                        <?php if ($athlete['height'] || $athlete['weight']): ?>
+                            <div class="athlete-meta">
+                                <i class="fas fa-ruler-vertical"></i>
+                                <?php if ($athlete['height']) echo $athlete['height'] . 'cm'; ?>
+                                <?php if ($athlete['height'] && $athlete['weight']) echo ' • '; ?>
+                                <?php if ($athlete['weight']) echo $athlete['weight'] . 'lbs'; ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($athlete['shooting_hand']): ?>
+                            <div class="athlete-meta">
+                                <i class="fas fa-hand-point-right"></i>
+                                Shoots: <?= htmlspecialchars(ucfirst($athlete['shooting_hand'])) ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
