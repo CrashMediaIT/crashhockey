@@ -36,6 +36,21 @@ try {
         $shooting_hand = $_POST['shooting_hand'] ?? null;
         $catching_hand = $_POST['catching_hand'] ?? null;
         
+        // Validate ENUM values against database schema
+        $valid_positions = ['forward', 'defense', 'goalie', ''];
+        $valid_shooting_hands = ['left', 'right', 'ambidextrous', ''];
+        $valid_catching_hands = ['regular', 'full_right', ''];
+        
+        if (!in_array($position, $valid_positions, true)) {
+            $position = null;
+        }
+        if (!in_array($shooting_hand, $valid_shooting_hands, true)) {
+            $shooting_hand = null;
+        }
+        if (!in_array($catching_hand, $valid_catching_hands, true)) {
+            $catching_hand = null;
+        }
+        
         $stmt = $pdo->prepare("
             UPDATE users 
             SET position = ?, birth_date = ?, primary_arena = ?, 
@@ -43,8 +58,8 @@ try {
             WHERE id = ?
         ");
         $stmt->execute([
-            $position, $birth_date, $primary_arena, 
-            $weight, $height, $shooting_hand, $catching_hand,
+            $position ?: null, $birth_date, $primary_arena, 
+            $weight, $height, $shooting_hand ?: null, $catching_hand ?: null,
             $current_user_id
         ]);
     }
