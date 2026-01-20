@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 echo "Hash in DB starts with: " . substr($user['password'], 0, 10) . "...";
             }
         } else {
-            echo "<span style='color:orange'>FAILURE: No user found with that email.</span>";
+            echo "<span style='color:#7000a4'>FAILURE: No user found with that email.</span>";
         }
 
     } catch (Exception $e) {

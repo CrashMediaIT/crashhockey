@@ -468,8 +468,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             letter-spacing: 0.5px;
         }
         .btn:hover {
-            background: #ff6a00;
-            box-shadow: 0 5px 15px rgba(255, 77, 0, 0.3);
+            background: #5a0080;
+            box-shadow: 0 5px 15px rgba(112, 0, 164, 0.3);
             transform: translateY(-2px);
         }
         .alert {
@@ -518,7 +518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             transition: 0.3s;
         }
         .success-card a:hover {
-            background: #ff6a00;
+            background: #5a0080;
             transform: translateY(-2px);
         }
     </style>

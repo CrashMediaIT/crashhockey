@@ -82,7 +82,7 @@ requirePermission($pdo, $user_id, $user_role, 'import_from_ihs');
         font-size: 14px;
     }
     .btn:hover {
-        background: #ff6a00;
+        background: #5a0080;
         transform: translateY(-2px);
     }
     .btn-secondary {

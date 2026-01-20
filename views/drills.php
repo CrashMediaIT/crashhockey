@@ -92,7 +92,7 @@ $categories = $pdo->query("SELECT * FROM drill_categories ORDER BY name")->fetch
         font-size: 13px;
     }
     .btn:hover {
-        background: #ff6a00;
+        background: #5a0080;
         transform: translateY(-2px);
     }
     .btn-secondary {

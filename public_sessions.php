@@ -164,7 +164,7 @@
         }
         
         .session-capacity.low {
-            color: #ffa500;
+            color: #7000a4;
         }
         
         .register-btn {

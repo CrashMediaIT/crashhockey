@@ -153,7 +153,7 @@ $receipt_scanning_enabled = $settings['receipt_scanning_enabled'] ?? '0';
         .alert-error {
             background: rgba(220, 53, 69, 0.2);
             border: 1px solid rgba(220, 53, 69, 0.4);
-            color: #ff6b7a;
+            color: #7000a4;
         }
 
         @media (max-width: 768px) {
