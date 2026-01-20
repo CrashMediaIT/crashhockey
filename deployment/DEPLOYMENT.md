@@ -157,27 +157,27 @@ ls -la
 
 ```bash
 # Create required directories
-sudo mkdir -p /config/www/crashhockey/uploads
-sudo mkdir -p /config/www/crashhockey/sessions
-sudo mkdir -p /config/www/crashhockey/cache
-sudo mkdir -p /config/log
+sudo mkdir -p /portainer/nginx/www/crashhockey/uploads
+sudo mkdir -p /portainer/nginx/www/crashhockey/sessions
+sudo mkdir -p /portainer/nginx/www/crashhockey/cache
+sudo mkdir -p /portainer/nginx/log
 
 # Set ownership to NGINX user (UID 911 = 'abc' user in linuxserver containers)
-sudo chown -R 911:911 /config/www/crashhockey
-sudo chown -R 911:911 /config/log
+sudo chown -R 911:911 /portainer/nginx/www/crashhockey
+sudo chown -R 911:911 /portainer/nginx/log
 
 # Set directory permissions (755 for directories, 644 for files)
-sudo find /config/www/crashhockey -type d -exec chmod 755 {} \;
-sudo find /config/www/crashhockey -type f -exec chmod 644 {} \;
+sudo find /portainer/nginx/www/crashhockey -type d -exec chmod 755 {} \;
+sudo find /portainer/nginx/www/crashhockey -type f -exec chmod 644 {} \;
 
 # Make writable directories (775 for uploads, sessions, cache, and root)
-sudo chmod 775 /config/www/crashhockey
-sudo chmod -R 775 /config/www/crashhockey/uploads
-sudo chmod -R 775 /config/www/crashhockey/sessions
-sudo chmod -R 775 /config/www/crashhockey/cache
+sudo chmod 775 /portainer/nginx/www/crashhockey
+sudo chmod -R 775 /portainer/nginx/www/crashhockey/uploads
+sudo chmod -R 775 /portainer/nginx/www/crashhockey/sessions
+sudo chmod -R 775 /portainer/nginx/www/crashhockey/cache
 
 # Verify permissions
-ls -la /config/www/crashhockey
+ls -la /portainer/nginx/www/crashhockey
 ```
 
 **Permission Summary:**
@@ -210,20 +210,20 @@ echo "Write access OK" || echo "Write access FAILED"
 
 ```bash
 # Copy NGINX configuration
-sudo cp /config/www/crashhockey/deployment/crashhockey.conf \
-  /config/nginx/site-confs/crashhockey.conf
+sudo cp /portainer/nginx/www/crashhockey/deployment/crashhockey.conf \
+  /portainer/nginx/nginx/site-confs/crashhockey.conf
 
 # Copy PHP configuration
-sudo cp /config/www/crashhockey/deployment/php-config.ini \
-  /config/php/php-config.ini
+sudo cp /portainer/nginx/www/crashhockey/deployment/php-config.ini \
+  /portainer/nginx/php/php-config.ini
 
 # Set correct ownership
-sudo chown 911:911 /config/nginx/site-confs/crashhockey.conf
-sudo chown 911:911 /config/php/php-config.ini
+sudo chown 911:911 /portainer/nginx/nginx/site-confs/crashhockey.conf
+sudo chown 911:911 /portainer/nginx/php/php-config.ini
 
 # Verify files are in place
-ls -la /config/nginx/site-confs/
-ls -la /config/php/
+ls -la /portainer/nginx/nginx/site-confs/
+ls -la /portainer/nginx/php/
 ```
 
 **What Each File Does:**
