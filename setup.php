@@ -135,17 +135,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                 } else {
                     $schema = file_get_contents($schema_file);
                     
+                    // Disable foreign key checks temporarily to handle table creation order
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+                    
                     // Split by semicolons and execute each statement
                     $statements = array_filter(array_map('trim', explode(';', $schema)));
+                    $failed_statements = [];
                     
                     foreach ($statements as $statement) {
                         if (!empty($statement) && strpos($statement, '--') !== 0) {
-                            $pdo->exec($statement);
+                            try {
+                                $pdo->exec($statement);
+                            } catch (PDOException $e) {
+                                $failed_statements[] = ['statement' => substr($statement, 0, 100) . '...', 'error' => $e->getMessage()];
+                            }
                         }
                     }
                     
-                    // Don't create lock file yet - wait for SMTP config and admin creation
-                    $step = 3; // Move to SMTP configuration step
+                    // Re-enable foreign key checks
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+                    
+                    // SCHEMA VALIDATION: Test that critical tables exist
+                    $critical_tables = ['users', 'sessions', 'bookings', 'age_groups', 'skill_levels', 
+                                       'system_settings', 'practice_plans', 'packages'];
+                    $missing_tables = [];
+                    
+                    foreach ($critical_tables as $table) {
+                        $result = $pdo->query("SHOW TABLES LIKE '$table'");
+                        if ($result->rowCount() === 0) {
+                            $missing_tables[] = $table;
+                        }
+                    }
+                    
+                    // SCHEMA REPAIR: If tables are missing or statements failed, report them
+                    if (!empty($missing_tables) || !empty($failed_statements)) {
+                        $error = '<strong>Schema initialization completed with issues:</strong><br><br>';
+                        
+                        if (!empty($missing_tables)) {
+                            $error .= '<strong>Missing Tables:</strong> ' . implode(', ', $missing_tables) . '<br><br>';
+                        }
+                        
+                        if (!empty($failed_statements)) {
+                            $error .= '<strong>Failed Statements:</strong><br>';
+                            foreach ($failed_statements as $fail) {
+                                $error .= '• ' . htmlspecialchars($fail['statement']) . '<br>';
+                                $error .= '&nbsp;&nbsp;Error: ' . htmlspecialchars($fail['error']) . '<br>';
+                            }
+                            $error .= '<br>';
+                        }
+                        
+                        $error .= '<em>Database partially initialized. You can try to proceed, but some features may not work correctly.</em>';
+                        // Still allow moving forward
+                        $step = 3;
+                    } else {
+                        // Schema validation passed - all tables created successfully
+                        $step = 3; // Move to SMTP configuration step
+                    }
                 }
                 
             } catch (PDOException $e) {
