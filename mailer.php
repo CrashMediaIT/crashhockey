@@ -15,8 +15,8 @@ class SmtpMailer {
         $raw_host = $config['smtp_host'] ?? '';
         $host     = preg_replace('/^ssl:\/\/|^tls:\/\//', '', trim($raw_host));
         
-        $port = $config['smtp_port'] ?? '465';
-        $enc  = $config['smtp_encryption'] ?? 'ssl'; 
+        $port = $config['smtp_port'] ?? '';
+        $enc  = $config['smtp_encryption'] ?? ''; 
         
         // Ensure strings to prevent PHP 8 Fatal Errors on null
         $user = trim((string)($config['smtp_user'] ?? ''));
@@ -59,7 +59,7 @@ class SmtpMailer {
 
         // 7. ENVELOPE
         $fromEmail = !empty($config['smtp_from_email']) ? $config['smtp_from_email'] : $user;
-        $fromName  = !empty($config['smtp_from_name'])  ? $config['smtp_from_name']  : 'Crash Hockey System';
+        $fromName  = !empty($config['smtp_from_name'])  ? $config['smtp_from_name']  : '';
 
         $this->sendCommand("MAIL FROM: <$user>"); // Neo often requires Envelope From to match Login
         $this->sendCommand("RCPT TO: <$to>");
@@ -257,4 +257,5 @@ function sendEmail($to, $type, $data) {
         return false;
     }
 }
+
 ?>
