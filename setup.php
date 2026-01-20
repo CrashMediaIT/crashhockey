@@ -58,8 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 1) {
             $env_content .= "DB_PASS_ENCRYPTED=$encrypted_data\n";
             $env_content .= "ENCRYPTION_KEY_HASH=" . bin2hex($encryption_key_hash) . "\n";
             
-            if (file_put_contents($config_file, $env_content) === false) {
-                $error = 'Failed to write configuration file. Check directory permissions.';
+            // Capture actual error if write fails
+            $write_result = @file_put_contents($config_file, $env_content);
+            if ($write_result === false) {
+                $last_error = error_get_last();
+                $error_detail = $last_error ? $last_error['message'] : 'Unknown error';
+                $error = "Failed to write configuration file to: $config_file<br>";
+                $error .= "Error: $error_detail<br>";
+                $error .= "Directory: " . dirname($config_file) . "<br>";
+                $error .= "Writable: " . (is_writable(dirname($config_file)) ? 'Yes' : 'No') . "<br>";
+                $error .= "Web server user: " . (function_exists('posix_getpwuid') ? posix_getpwuid(posix_geteuid())['name'] : 'Unknown');
             } else {
                 // Move to step 2 (credentials stored in file, not session)
                 $step = 2;

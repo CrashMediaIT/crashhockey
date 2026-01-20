@@ -372,15 +372,50 @@ After deployment, verify everything is working:
 ## Common Issues and Solutions
 
 ### Issue: "Failed to write configuration file"
-**Solution:**
+
+**Symptom:** Setup wizard shows "Failed to write configuration file" but manual write test works.
+
+**Diagnosis Steps:**
 ```bash
-# Ensure root directory is writable
+# 1. Check current permissions
+ls -ld /portainer/nginx/www/crashhockey
+# Should show: drwxrwxr-x  911 911
+
+# 2. Test manual write from container (should work)
+docker exec nginx touch /config/www/crashhockey/test.txt && \
+docker exec nginx rm /config/www/crashhockey/test.txt && \
+echo "✅ Container can write" || echo "❌ Container cannot write"
+
+# 3. Check PHP user
+docker exec nginx ps aux | grep php-fpm
+# Should show processes running as user 'abc' (UID 911)
+
+# 4. Check web server user from inside container
+docker exec nginx whoami
+# Should show 'abc'
+```
+
+**Solutions:**
+
+1. **Ensure root directory is writable:**
+```bash
 sudo chmod 775 /portainer/nginx/www/crashhockey
 sudo chown 911:911 /portainer/nginx/www/crashhockey
+```
 
-# Verify
-ls -ld /portainer/nginx/www/crashhockey
-# Should show: drwxrwxr-x  911 911  /portainer/nginx/www/crashhockey
+2. **If permissions look correct but still failing:**
+   - The setup wizard now shows detailed error messages
+   - Look for the actual PHP error in the setup page
+   - Check: directory path, writable status, and web server user
+
+3. **Check PHP error log for details:**
+```bash
+docker exec nginx tail -50 /config/log/php-error.log
+```
+
+4. **Verify directory exists and is accessible:**
+```bash
+docker exec nginx ls -la /config/www/crashhockey/
 ```
 
 ### Issue: "502 Bad Gateway"
