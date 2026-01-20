@@ -1,5 +1,19 @@
 # NGINX & PHP Deployment Guide for Crash Hockey
 
+## Directory Structure
+
+**IMPORTANT:** This guide uses a custom `/config` directory structure:
+- Web root: `/config/www/crashhockey`
+- NGINX configuration: `/config/nginx/`
+- PHP socket: `/config/php/php8.1-fpm.sock`
+- Logs: `/config/nginx/log/`
+- SSL certificates: `/config/nginx/ssl/`
+- Backups: `/config/backups/crashhockey`
+
+If your system uses standard paths (e.g., `/var/www`, `/etc/nginx`), adjust the paths accordingly throughout this guide.
+
+---
+
 ## Prerequisites
 
 - Ubuntu 20.04/22.04 or similar Linux distribution
@@ -84,22 +98,22 @@ sudo systemctl restart php8.1-fpm
 
 ```bash
 # Create web root directory
-sudo mkdir -p /var/www/crashhockey
+sudo mkdir -p /config/www/crashhockey
 
 # Copy application files
-sudo cp -r * /var/www/crashhockey/
+sudo cp -r * /config/www/crashhockey/
 
-# Set ownership
-sudo chown -R www-data:www-data /var/www/crashhockey
+# Set ownership (adjust user if different from www-data)
+sudo chown -R www-data:www-data /config/www/crashhockey
 
 # Set permissions
-sudo find /var/www/crashhockey -type f -exec chmod 644 {} \;
-sudo find /var/www/crashhockey -type d -exec chmod 755 {} \;
+sudo find /config/www/crashhockey -type f -exec chmod 644 {} \;
+sudo find /config/www/crashhockey -type d -exec chmod 755 {} \;
 
 # Create upload directory for videos
-sudo mkdir -p /var/www/crashhockey/uploads/videos
-sudo chown -R www-data:www-data /var/www/crashhockey/uploads
-sudo chmod -R 775 /var/www/crashhockey/uploads
+sudo mkdir -p /config/www/crashhockey/uploads/videos
+sudo chown -R www-data:www-data /config/www/crashhockey/uploads
+sudo chmod -R 775 /config/www/crashhockey/uploads
 ```
 
 ## 5. Configure NGINX
@@ -107,37 +121,34 @@ sudo chmod -R 775 /var/www/crashhockey/uploads
 ### Copy the configuration file
 
 ```bash
-# Remove default site
-sudo rm /etc/nginx/sites-enabled/default
-
 # Copy Crash Hockey NGINX configuration
-sudo cp nginx.conf /etc/nginx/sites-available/crashhockey.conf
+sudo cp nginx.conf /config/nginx/crashhockey.conf
 
 # Edit the configuration to set your domain name
-sudo nano /etc/nginx/sites-available/crashhockey.conf
+sudo nano /config/nginx/crashhockey.conf
 ```
 
 Update these lines:
 ```nginx
 server_name your-domain.com www.your-domain.com;
-root /var/www/crashhockey;
+root /config/www/crashhockey;
 ```
 
-### Create NGINX directories for large uploads
+### Create NGINX directories for large uploads and logs
 
 ```bash
 # Create temporary upload directory
-sudo mkdir -p /var/nginx/client_body_temp
-sudo chown -R www-data:www-data /var/nginx
-sudo chmod -R 755 /var/nginx
+sudo mkdir -p /config/nginx/client_body_temp
+sudo mkdir -p /config/nginx/log
+
+# Set ownership (adjust user if different from www-data)
+sudo chown -R www-data:www-data /config/nginx
+sudo chmod -R 755 /config/nginx
 ```
 
 ### Enable the site
 
 ```bash
-# Create symbolic link
-sudo ln -s /etc/nginx/sites-available/crashhockey.conf /etc/nginx/sites-enabled/
-
 # Test NGINX configuration
 sudo nginx -t
 
@@ -191,13 +202,19 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 If using a custom certificate:
 
-1. Uncomment the SSL server block in `/etc/nginx/sites-available/crashhockey.conf`
-2. Update certificate paths:
-   ```nginx
-   ssl_certificate /path/to/fullchain.pem;
-   ssl_certificate_key /path/to/privkey.pem;
+1. Create SSL directory and place your certificates:
+   ```bash
+   sudo mkdir -p /config/nginx/ssl/your-domain.com
+   # Copy your SSL certificate files to /config/nginx/ssl/your-domain.com/
    ```
-3. Test and reload NGINX:
+
+2. Uncomment the SSL server block in `/config/nginx/crashhockey.conf`
+3. Update certificate paths:
+   ```nginx
+   ssl_certificate /config/nginx/ssl/your-domain.com/fullchain.pem;
+   ssl_certificate_key /config/nginx/ssl/your-domain.com/privkey.pem;
+   ```
+4. Test and reload NGINX:
    ```bash
    sudo nginx -t
    sudo systemctl reload nginx
@@ -243,15 +260,15 @@ sudo systemctl reload nginx
 
 ```bash
 # Restrict access to sensitive files
-sudo chmod 600 /var/www/crashhockey/crashhockey.env
-sudo chmod 600 /var/www/crashhockey/.setup_complete
+sudo chmod 600 /config/www/crashhockey/crashhockey.env
+sudo chmod 600 /config/www/crashhockey/.setup_complete
 
 # Ensure web server can't write to most files
-sudo find /var/www/crashhockey -type f -exec chmod 644 {} \;
-sudo find /var/www/crashhockey -type d -exec chmod 755 {} \;
+sudo find /config/www/crashhockey -type f -exec chmod 644 {} \;
+sudo find /config/www/crashhockey -type d -exec chmod 755 {} \;
 
 # Exception: uploads directory needs write access
-sudo chmod -R 775 /var/www/crashhockey/uploads
+sudo chmod -R 775 /config/www/crashhockey/uploads
 ```
 
 ## 10. Configure Automatic Backups
@@ -262,7 +279,7 @@ Create `/usr/local/bin/backup-crashhockey.sh`:
 
 ```bash
 #!/bin/bash
-BACKUP_DIR="/var/backups/crashhockey"
+BACKUP_DIR="/config/backups/crashhockey"
 DATE=$(date +%Y%m%d_%H%M%S)
 DB_NAME="crashhockey"
 
@@ -272,7 +289,7 @@ mkdir -p $BACKUP_DIR
 mysqldump -u root -p$MYSQL_PASSWORD $DB_NAME | gzip > $BACKUP_DIR/db_$DATE.sql.gz
 
 # Backup files
-tar -czf $BACKUP_DIR/files_$DATE.tar.gz /var/www/crashhockey/uploads
+tar -czf $BACKUP_DIR/files_$DATE.tar.gz /config/www/crashhockey/uploads
 
 # Keep only last 7 days of backups
 find $BACKUP_DIR -name "*.gz" -mtime +7 -delete
@@ -318,7 +335,7 @@ sudo tail -f /var/log/php8.1-fpm.log
 df -h
 
 # Check upload directory size
-du -sh /var/www/crashhockey/uploads
+du -sh /config/www/crashhockey/uploads
 ```
 
 ## 12. Performance Optimization
@@ -375,7 +392,7 @@ If uploads timeout:
 
 Check permissions:
 ```bash
-sudo ls -la /var/www/crashhockey/uploads
+sudo ls -la /config/www/crashhockey/uploads
 # Should show: drwxrwxr-x www-data www-data
 ```
 
