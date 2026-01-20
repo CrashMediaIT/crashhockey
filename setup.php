@@ -794,8 +794,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     'permissions', 'role_permissions', 'user_permissions',
                     // Accounting tables
                     'expenses', 'expense_categories', 'expense_line_items', 'cloud_receipts', 
-                    'mileage_logs', 'mileage_stops', 'refunds',
-                    // Additional tables (was missing workouts from validation)
+                    'mileage_logs', 'mileage_stops', 'refunds'
                 ];
                 
                 $existing_tables = [];
