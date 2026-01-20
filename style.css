@@ -2,9 +2,9 @@
     --bg-main: #06080b;       /* Deepest Black/Blue */
     --bg-card: #0d1117;       /* Slightly Lighter for cards */
     
-    /* THEME: MAGMA ORANGE */
-    --neon: #ff4d00;          /* Primary Impact Color */
-    --accent: #ff9d00;        /* Secondary Amber for Gradients */
+    /* THEME: PURPLE */
+    --neon: #8b5cf6;          /* Primary Impact Color */
+    --accent: #c0c0c0;        /* Secondary Silver for Gradients */
     
     --text-white: #ffffff;
     --text-dim: #94a3b8;      /* Muted Slate Text */
@@ -32,7 +32,7 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
 .nav-menu a:hover { color: var(--neon); }
 
 .nav-btn { background: var(--neon); color: #fff !important; padding: 8px 20px; border-radius: 4px; transition: 0.3s; white-space: nowrap; font-weight: 700; }
-.nav-btn:hover { box-shadow: 0 0 15px rgba(255, 77, 0, 0.4); transform: translateY(-1px); background: #ff6a00; }
+.nav-btn:hover { box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); transform: translateY(-1px); background: #a78bfa; }
 
 /* --- HERO SECTION --- */
 .hero { 
@@ -42,7 +42,7 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
     align-items: center;
     position: relative; 
     overflow: hidden; 
-    /* Dark overlay to make orange text pop */
+    /* Dark overlay to make purple text pop */
     background: linear-gradient(rgba(6, 8, 11, 0.9), rgba(6, 8, 11, 0.7)), 
                 url('https://plus.unsplash.com/premium_photo-1661964423428-ac2381ffcef2?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8aG9ja2V5fGVufDB8fDB8fHww');
     background-size: cover;
@@ -50,17 +50,17 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
     background-attachment: fixed;
 }
 
-/* Orange Scanline Animation */
-.scanline { width: 100%; height: 100px; background: linear-gradient(0deg, transparent, rgba(255, 77, 0, 0.05), transparent); position: absolute; top: -100px; left: 0; pointer-events: none; animation: scan 8s linear infinite; }
+/* Purple Scanline Animation */
+.scanline { width: 100%; height: 100px; background: linear-gradient(0deg, transparent, rgba(139, 92, 246, 0.05), transparent); position: absolute; top: -100px; left: 0; pointer-events: none; animation: scan 8s linear infinite; }
 @keyframes scan { 0% { top: -100px; } 100% { top: 100%; } }
 
 .status-link { text-decoration: none; display: inline-block; margin-bottom: 25px; }
-.status-indicator { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--neon); background: rgba(255, 77, 0, 0.05); padding: 8px 16px; border-radius: 4px; border: 1px solid var(--neon); transition: 0.3s; }
-.status-link:hover .status-indicator { background: rgba(255, 77, 0, 0.15); box-shadow: 0 0 15px rgba(255, 77, 0, 0.2); transform: translateY(-2px); }
+.status-indicator { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--neon); background: rgba(139, 92, 246, 0.05); padding: 8px 16px; border-radius: 4px; border: 1px solid var(--neon); transition: 0.3s; }
+.status-link:hover .status-indicator { background: rgba(139, 92, 246, 0.15); box-shadow: 0 0 15px rgba(139, 92, 246, 0.2); transform: translateY(-2px); }
 .dot { width: 8px; height: 8px; background: var(--neon); border-radius: 50%; box-shadow: 0 0 8px var(--neon); }
 
 .hero h1 { font-size: clamp(2.5rem, 5vw, 4.8rem); line-height: 1.05; margin-bottom: 20px; font-weight: 900; }
-.highlight { color: var(--neon); text-shadow: 0 0 40px rgba(255, 77, 0, 0.3); }
+.highlight { color: var(--neon); text-shadow: 0 0 40px rgba(139, 92, 246, 0.3); }
 .hero p { font-size: clamp(1rem, 2vw, 1.25rem); color: var(--text-dim); max-width: 580px; margin-bottom: 40px; }
 
 /* --- BUTTONS --- */
@@ -83,7 +83,7 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
     border: none;
 }
 
-/* Orange/Amber Gradient Hover */
+/* Purple/Silver Gradient Hover */
 .btn-primary::before {
     content: '';
     position: absolute;
@@ -97,7 +97,7 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
 .btn-primary:hover::before { opacity: 1; }
 .btn-primary:hover { 
     transform: translateY(-3px); 
-    box-shadow: 0 10px 20px rgba(255, 77, 0, 0.3);
+    box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
 }
 
 .btn-secondary { 
@@ -163,7 +163,7 @@ header { background: rgba(6, 8, 11, 0.95); backdrop-filter: blur(12px); padding:
 .card-body { padding: 25px; flex-grow: 1; }
 .card-body h3 { margin-bottom: 10px; font-size: 1.3rem; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-.tags span { font-size: 10px; background: rgba(255, 77, 0, 0.1); padding: 4px 8px; border-radius: 4px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
+.tags span { font-size: 10px; background: rgba(139, 92, 246, 0.1); padding: 4px 8px; border-radius: 4px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
 
 .library-footer { text-align: center; margin-top: 40px; }
 .library-footer a { color: var(--accent); text-decoration: none; font-weight: 800; text-transform: uppercase; font-size: 13px; letter-spacing: 1px; }

@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
                 // Read and execute schema file
-                $schema_file = __DIR__ . '/schema.sql';
+                $schema_file = __DIR__ . '/deployment/schema.sql';
                 if (!file_exists($schema_file)) {
                     $error = 'Schema file not found. Please ensure schema.sql exists.';
                 } else {
@@ -243,7 +243,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                         $smtp_tested = true;
                         $step = 4; // Move to admin creation
                     } else {
-                        $error = 'SMTP test failed. Please check your settings and try again.';
+                        // Fetch the actual error message from email_logs
+                        $stmt = $pdo->prepare("SELECT error_message FROM email_logs WHERE recipient = ? AND status = 'FAILED' ORDER BY sent_at DESC LIMIT 1");
+                        $stmt->execute([$test_email]);
+                        $email_error = $stmt->fetchColumn();
+                        
+                        $error = 'SMTP test failed: ' . ($email_error ?: 'Please check your settings and try again.');
                     }
                     
                 } catch (PDOException $e) {
