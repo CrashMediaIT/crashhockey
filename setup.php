@@ -766,7 +766,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Define ALL tables from schema.sql that MUST exist (52 total)
+                // Define ALL tables from schema.sql that MUST exist (53 total)
                 $all_tables = [
                     // Core tables
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
@@ -794,7 +794,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     'permissions', 'role_permissions', 'user_permissions',
                     // Accounting tables
                     'expenses', 'expense_categories', 'expense_line_items', 'cloud_receipts', 
-                    'mileage_logs', 'mileage_stops', 'refunds'
+                    'mileage_logs', 'mileage_stops', 'refunds',
+                    // Additional tables (was missing workouts from validation)
                 ];
                 
                 $existing_tables = [];
@@ -952,31 +953,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     
                     <div class="form-group">
                         <label>SMTP Username</label>
-                        <input type="text" name="smtp_user" required>
+                        <input type="text" name="smtp_user" style="width: 100%;" required>
                         <div class="help-text">Usually your email address</div>
                     </div>
                     
                     <div class="form-group">
                         <label>SMTP Password</label>
-                        <input type="password" name="smtp_pass" required>
+                        <input type="password" name="smtp_pass" style="width: 100%;" required>
                         <div class="help-text">Your email password or app-specific password</div>
                     </div>
                     
                     <div class="form-group">
                         <label>From Email</label>
-                        <input type="email" name="smtp_from_email" required>
+                        <input type="email" name="smtp_from_email" style="width: 100%;" required>
                         <div class="help-text">Email address that will appear as sender</div>
                     </div>
                     
                     <div class="form-group">
                         <label>From Name</label>
-                        <input type="text" name="smtp_from_name" value="Crash Hockey" required>
+                        <input type="text" name="smtp_from_name" value="Crash Hockey" style="width: 100%;" required>
                         <div class="help-text">Name that will appear as sender</div>
                     </div>
                     
                     <div class="form-group">
                         <label>Test Email Address</label>
-                        <input type="email" name="test_email" required>
+                        <input type="email" name="test_email" style="width: 100%;" required>
                         <div class="help-text">
                             <strong>Important:</strong> A test email will be sent to verify your SMTP settings
                         </div>

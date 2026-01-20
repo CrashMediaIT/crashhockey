@@ -611,7 +611,7 @@ CREATE TABLE IF NOT EXISTS `email_logs` (
   `template_type` VARCHAR(50) DEFAULT NULL,
   `status` ENUM('sent', 'failed') DEFAULT 'sent',
   `error_message` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_recipient` (`recipient`),
   INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
