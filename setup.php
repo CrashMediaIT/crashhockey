@@ -566,7 +566,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             letter-spacing: 0.5px;
         }
         input[type="text"],
-        input[type="password"] {
+        input[type="password"],
+        input[type="email"],
+        input[type="number"],
+        select {
             width: 100%;
             padding: 12px 15px;
             background: #06080b;
@@ -576,7 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             font-size: 14px;
             transition: 0.2s;
         }
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #7000a4;
             box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.1);
@@ -942,7 +945,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                         
                         <div class="form-group">
                             <label>Encryption</label>
-                            <select name="smtp_encryption" style="width: 100%; padding: 12px 15px; background: #06080b; border: 1px solid #1e293b; border-radius: 6px; color: #fff; font-size: 14px;">
+                            <select name="smtp_encryption">
                                 <option value="tls">TLS</option>
                                 <option value="ssl">SSL</option>
                                 <option value="">None</option>
@@ -952,31 +955,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     
                     <div class="form-group">
                         <label>SMTP Username</label>
-                        <input type="text" name="smtp_user" style="width: 100%;" required>
+                        <input type="text" name="smtp_user" required>
                         <div class="help-text">Usually your email address</div>
                     </div>
                     
                     <div class="form-group">
                         <label>SMTP Password</label>
-                        <input type="password" name="smtp_pass" style="width: 100%;" required>
+                        <input type="password" name="smtp_pass" required>
                         <div class="help-text">Your email password or app-specific password</div>
                     </div>
                     
                     <div class="form-group">
                         <label>From Email</label>
-                        <input type="email" name="smtp_from_email" style="width: 100%;" required>
+                        <input type="email" name="smtp_from_email" required>
                         <div class="help-text">Email address that will appear as sender</div>
                     </div>
                     
                     <div class="form-group">
                         <label>From Name</label>
-                        <input type="text" name="smtp_from_name" value="Crash Hockey" style="width: 100%;" required>
+                        <input type="text" name="smtp_from_name" value="Crash Hockey" required>
                         <div class="help-text">Name that will appear as sender</div>
                     </div>
                     
                     <div class="form-group">
                         <label>Test Email Address</label>
-                        <input type="email" name="test_email" style="width: 100%;" required>
+                        <input type="email" name="test_email" required>
                         <div class="help-text">
                             <strong>Important:</strong> A test email will be sent to verify your SMTP settings
                         </div>
