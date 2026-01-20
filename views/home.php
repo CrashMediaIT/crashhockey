@@ -444,6 +444,90 @@ $unread_count = $notif_stmt->fetchColumn();
             </div>
         </div>
         
+        <!-- Pending Goal Approvals -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-clipboard-check"></i> Pending Goal Approvals
+                    <?php
+                    // Get pending approvals count
+                    $pending_approvals_stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT ga.id) 
+                        FROM goal_eval_approvals ga
+                        INNER JOIN goal_eval_steps ges ON ga.step_id = ges.id
+                        INNER JOIN goal_evaluations ge ON ges.evaluation_id = ge.id
+                        INNER JOIN users u ON ge.athlete_id = u.id
+                        WHERE ga.approver_id = ? 
+                        AND ga.status = 'pending'
+                        AND u.assigned_coach_id = ?
+                    ");
+                    $pending_approvals_stmt->execute([$user_id, $user_id]);
+                    $pending_count = $pending_approvals_stmt->fetchColumn();
+                    
+                    if ($pending_count > 0):
+                    ?>
+                        <span class="notification-badge"><?= $pending_count ?></span>
+                    <?php endif; ?>
+                </h2>
+                <a href="?page=evaluations_goals" class="card-action">View All →</a>
+            </div>
+            
+            <?php
+            if ($pending_count == 0):
+            ?>
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No pending approvals</p>
+                </div>
+            <?php else:
+                // Get recent pending approvals
+                $approvals_stmt = $pdo->prepare("
+                    SELECT 
+                        ga.*,
+                        ges.step_number,
+                        ges.description as step_description,
+                        ge.goal_title,
+                        u.first_name,
+                        u.last_name,
+                        u.id as athlete_id
+                    FROM goal_eval_approvals ga
+                    INNER JOIN goal_eval_steps ges ON ga.step_id = ges.id
+                    INNER JOIN goal_evaluations ge ON ges.evaluation_id = ge.id
+                    INNER JOIN users u ON ge.athlete_id = u.id
+                    WHERE ga.approver_id = ? 
+                    AND ga.status = 'pending'
+                    AND u.assigned_coach_id = ?
+                    ORDER BY ga.created_at DESC
+                    LIMIT 5
+                ");
+                $approvals_stmt->execute([$user_id, $user_id]);
+                $pending_approvals = $approvals_stmt->fetchAll();
+            ?>
+                <div class="session-list">
+                    <?php foreach ($pending_approvals as $approval): ?>
+                        <a href="?page=evaluations_goals&athlete_id=<?= $approval['athlete_id'] ?>&highlight=<?= $approval['id'] ?>" class="session-item">
+                            <div class="session-header">
+                                <div>
+                                    <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 5px;">
+                                        <?= htmlspecialchars($approval['first_name'] . ' ' . $approval['last_name']) ?>
+                                    </div>
+                                    <div style="font-size: 14px; color: #94a3b8;">
+                                        <?= htmlspecialchars($approval['goal_title']) ?>
+                                    </div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
+                                        Step <?= $approval['step_number'] ?>: <?= htmlspecialchars(substr($approval['step_description'], 0, 50)) ?><?= strlen($approval['step_description']) > 50 ? '...' : '' ?>
+                                    </div>
+                                </div>
+                                <div style="font-size: 13px; color: var(--primary); font-weight: 600;">
+                                    Review →
+                                </div>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        
         <!-- Recent Activity -->
         <div class="dashboard-card">
             <div class="card-header">
