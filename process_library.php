@@ -34,10 +34,14 @@ if ($action == 'add_exercise') {
 // B. Create Workout Template
 if ($action == 'create_template') {
     $title = trim($_POST['title']);
+    $description = trim($_POST['description'] ?? '');
+    $category_id = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
     $selected_exercises = $_POST['exercises'] ?? []; // Array of IDs
+    $coach_id = $_SESSION['user_id']; // Auto-assign logged-in coach
     
-    // 1. Create Template Header
-    $pdo->prepare("INSERT INTO workout_templates (title) VALUES (?)")->execute([$title]);
+    // 1. Create Template Header with coach and category
+    $pdo->prepare("INSERT INTO workout_templates (title, description, category_id, created_by_coach_id) VALUES (?, ?, ?, ?)")
+        ->execute([$title, $description, $category_id, $coach_id]);
     $template_id = $pdo->lastInsertId();
     
     // 2. Link Exercises
@@ -82,11 +86,15 @@ if ($action == 'add_food') {
 // B. Create Nutrition Template
 if ($action == 'create_nutrition_template') {
     $title = trim($_POST['title']);
+    $description = trim($_POST['description'] ?? '');
+    $category_id = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
     $selected_foods = $_POST['foods'] ?? [];
     $meal_types     = $_POST['meal_type'] ?? []; // Array [food_id => 'Breakfast']
+    $coach_id = $_SESSION['user_id']; // Auto-assign logged-in coach
     
-    // 1. Create Template Header
-    $pdo->prepare("INSERT INTO nutrition_templates (title) VALUES (?)")->execute([$title]);
+    // 1. Create Template Header with coach and category
+    $pdo->prepare("INSERT INTO nutrition_templates (title, description, category_id, created_by_coach_id) VALUES (?, ?, ?, ?)")
+        ->execute([$title, $description, $category_id, $coach_id]);
     $template_id = $pdo->lastInsertId();
     
     // 2. Link Foods

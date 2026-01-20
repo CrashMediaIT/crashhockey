@@ -71,15 +71,17 @@ if ($action === 'save_plan') {
                 $share_token = generateShareToken();
             }
             
+            $category_id = !empty($_POST['category_id']) ? intval($_POST['category_id']) : null;
+            
             $stmt = $pdo->prepare("
                 INSERT INTO practice_plans (
                     title, description, total_duration, age_group, focus_area,
-                    is_public, share_token, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    category_id, is_public, share_token, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $title, $description, $total_duration, $age_group,
-                $focus_area, $is_public, $share_token, $user_id
+                $focus_area, $category_id, $is_public, $share_token, $user_id
             ]);
             $plan_id = $pdo->lastInsertId();
         }

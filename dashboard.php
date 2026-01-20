@@ -52,6 +52,7 @@ $allowed_pages = [
     'admin_discounts'     => 'views/admin_discounts.php',
     'admin_permissions'   => 'views/admin_permissions.php',
     'admin_age_skill'     => 'views/admin_age_skill.php',
+    'admin_plan_categories' => 'views/admin_plan_categories.php',
     'admin_packages'      => 'views/admin_packages.php',
     'accounting'          => 'views/accounting.php',
     'reports_income'      => 'views/reports_income.php',
@@ -227,6 +228,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_locations" class="nav-link <?= $page=='admin_locations'?'active':'' ?>"><i class="fa-solid fa-map-location-dot"></i> Locations</a>
             <a href="?page=admin_session_types" class="nav-link <?= $page=='admin_session_types'?'active':'' ?>"><i class="fa-solid fa-tags"></i> Session Types</a>
             <a href="?page=admin_age_skill" class="nav-link <?= $page=='admin_age_skill'?'active':'' ?>"><i class="fa-solid fa-users-cog"></i> Age & Skill Levels</a>
+            <a href="?page=admin_plan_categories" class="nav-link <?= $page=='admin_plan_categories'?'active':'' ?>"><i class="fa-solid fa-folder-tree"></i> Plan Categories</a>
             <a href="?page=admin_discounts" class="nav-link <?= $page=='admin_discounts'?'active':'' ?>"><i class="fa-solid fa-percent"></i> Discounts</a>
             <a href="?page=admin_packages" class="nav-link <?= $page=='admin_packages'?'active':'' ?>"><i class="fa-solid fa-box-open"></i> Packages</a>
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>

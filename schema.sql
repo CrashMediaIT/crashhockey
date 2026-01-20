@@ -351,12 +351,52 @@ CREATE TABLE IF NOT EXISTS `exercises` (
   INDEX `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =========================================================
+-- PLAN CATEGORY TABLES
+-- =========================================================
+
+-- Workout Plan Categories
+CREATE TABLE IF NOT EXISTS `workout_plan_categories` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Nutrition Plan Categories
+CREATE TABLE IF NOT EXISTS `nutrition_plan_categories` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Practice Plan Categories
+CREATE TABLE IF NOT EXISTS `practice_plan_categories` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Workout Templates
 CREATE TABLE IF NOT EXISTS `workout_templates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `category_id` INT DEFAULT NULL,
+  `created_by_coach_id` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`category_id`) REFERENCES `workout_plan_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`created_by_coach_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_category` (`category_id`),
+  INDEX `idx_coach` (`created_by_coach_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Workout Template Items
@@ -413,7 +453,13 @@ CREATE TABLE IF NOT EXISTS `nutrition_templates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `category_id` INT DEFAULT NULL,
+  `created_by_coach_id` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`category_id`) REFERENCES `nutrition_plan_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`created_by_coach_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_category` (`category_id`),
+  INDEX `idx_coach` (`created_by_coach_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Nutrition Template Items
@@ -670,6 +716,7 @@ CREATE TABLE IF NOT EXISTS `practice_plans` (
   `total_duration` INT DEFAULT 60,
   `age_group` VARCHAR(50) DEFAULT NULL,
   `focus_area` VARCHAR(100) DEFAULT NULL,
+  `category_id` INT DEFAULT NULL,
   `share_token` VARCHAR(64) UNIQUE DEFAULT NULL,
   `is_public` TINYINT(1) DEFAULT 0,
   `imported_from_ihs` TINYINT(1) DEFAULT 0,
@@ -678,9 +725,11 @@ CREATE TABLE IF NOT EXISTS `practice_plans` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`category_id`) REFERENCES `practice_plan_categories`(`id`) ON DELETE SET NULL,
   INDEX `idx_share_token` (`share_token`),
   INDEX `idx_public` (`is_public`),
-  INDEX `idx_ihs` (`imported_from_ihs`, `ihs_plan_id`)
+  INDEX `idx_ihs` (`imported_from_ihs`, `ihs_plan_id`),
+  INDEX `idx_category` (`category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Practice Plan Drills
@@ -898,3 +947,34 @@ INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
 ('mileage_rate_per_mile', '1.09'),
 ('receipt_scan_enabled', '0'),
 ('credit_expiry_days', '365');
+
+-- =========================================================
+-- DEFAULT PLAN CATEGORIES
+-- =========================================================
+
+-- Default Workout Plan Categories
+INSERT IGNORE INTO `workout_plan_categories` (`name`, `description`, `display_order`) VALUES
+('Strength', 'Focus on building muscle strength and power', 1),
+('Speed', 'Improve skating speed and acceleration', 2),
+('Stamina', 'Build cardiovascular endurance', 3),
+('Flexibility', 'Increase range of motion and prevent injuries', 4),
+('Endurance', 'Long-term sustained performance', 5),
+('Recovery', 'Active recovery and regeneration', 6);
+
+-- Default Nutrition Plan Categories
+INSERT IGNORE INTO `nutrition_plan_categories` (`name`, `description`, `display_order`) VALUES
+('Bulking', 'Increase muscle mass and body weight', 1),
+('Cutting', 'Reduce body fat while maintaining muscle', 2),
+('Maintenance', 'Maintain current weight and composition', 3),
+('Performance', 'Optimize game day nutrition', 4),
+('Recovery', 'Post-training nutrition for recovery', 5),
+('Vegetarian', 'Plant-based nutrition plans', 6);
+
+-- Default Practice Plan Categories
+INSERT IGNORE INTO `practice_plan_categories` (`name`, `description`, `display_order`) VALUES
+('Offense', 'Attacking strategies and scoring', 1),
+('Defense', 'Defensive positioning and techniques', 2),
+('Special Teams', 'Power play and penalty kill', 3),
+('Conditioning', 'Physical fitness and endurance', 4),
+('Skills', 'Fundamental skill development', 5),
+('Game Prep', 'Pre-game preparation and tactics', 6);
