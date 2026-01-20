@@ -43,15 +43,18 @@ function sendApprovalNotification($pdo, $to_user_id, $type, $details) {
         ");
         
         $message = '';
+        $step_title = htmlspecialchars($details['step_title'], ENT_QUOTES, 'UTF-8');
+        $note = isset($details['note']) ? htmlspecialchars($details['note'], ENT_QUOTES, 'UTF-8') : '';
+        
         switch ($type) {
             case 'approval_requested':
-                $message = "New approval request for: {$details['step_title']}";
+                $message = "New approval request for: {$step_title}";
                 break;
             case 'approval_approved':
-                $message = "Your step '{$details['step_title']}' has been approved!";
+                $message = "Your step '{$step_title}' has been approved!";
                 break;
             case 'approval_rejected':
-                $message = "Your step '{$details['step_title']}' was not approved. " . ($details['note'] ?? '');
+                $message = "Your step '{$step_title}' was not approved. " . $note;
                 break;
         }
         

@@ -970,9 +970,27 @@ function generateShareLink(evalId) {
 
 function copyShareLink() {
     const input = document.getElementById('shareLink');
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(input.value).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            fallbackCopyText(input);
+        });
+    } else {
+        fallbackCopyText(input);
+    }
+}
+
+function fallbackCopyText(input) {
     input.select();
-    document.execCommand('copy');
-    alert('Link copied to clipboard!');
+    try {
+        document.execCommand('copy');
+        alert('Link copied to clipboard!');
+    } catch (err) {
+        alert('Failed to copy link. Please copy manually.');
+    }
 }
 
 function revokeShareLink(evalId) {
