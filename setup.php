@@ -766,16 +766,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Define all critical tables that MUST exist
+                // Define ALL tables from schema.sql that MUST exist (52 total)
                 $all_tables = [
+                    // Core tables
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
-                    'session_types', 'sessions', 'practice_plans', 'drill_categories', 'drills',
-                    'practice_plan_drills', 'bookings', 'athlete_teams', 'workout_templates', 
-                    'nutrition_templates', 'athlete_notes', 'videos', 'video_notes', 
-                    'notifications', 'email_logs', 'permissions', 'role_permissions', 
-                    'user_permissions', 'system_settings', 'packages', 'user_credits', 
-                    'workout_plan_categories', 'nutrition_plan_categories', 'practice_plan_categories',
-                    'expense_categories', 'cloud_receipts', 'mileage_logs', 'refunds'
+                    // Session & Booking tables
+                    'session_types', 'sessions', 'session_templates', 'bookings', 'discount_codes',
+                    // Practice Plan tables
+                    'practice_plans', 'practice_plan_drills', 'practice_plan_shares', 'practice_plan_categories',
+                    // Drill tables
+                    'drill_categories', 'drills', 'drill_tags',
+                    // Team tables
+                    'athlete_teams', 'athlete_notes', 'athlete_stats',
+                    // Workout tables
+                    'workouts', 'workout_templates', 'workout_template_items', 'workout_plan_categories',
+                    'user_workouts', 'user_workout_items', 'exercises',
+                    // Nutrition tables
+                    'nutrition_plans', 'nutrition_templates', 'nutrition_template_items', 
+                    'nutrition_plan_categories', 'foods',
+                    // Video tables
+                    'videos', 'video_notes',
+                    // Package & Credit tables
+                    'packages', 'package_sessions', 'user_credits', 'user_package_credits',
+                    // System tables
+                    'notifications', 'email_logs', 'system_settings', 'security_logs', 'testing_results',
+                    // Permission tables
+                    'permissions', 'role_permissions', 'user_permissions',
+                    // Accounting tables
+                    'expenses', 'expense_categories', 'expense_line_items', 'cloud_receipts', 
+                    'mileage_logs', 'mileage_stops', 'refunds'
                 ];
                 
                 $existing_tables = [];
