@@ -25,11 +25,20 @@ $is_coach = ($user_role === 'coach' || $user_role === 'coach_plus' || $user_role
  * Helper function to log goal history
  */
 function logGoalHistory($pdo, $goal_id, $action, $user_id, $changes = null) {
+    $changes_json = null;
+    if ($changes !== null) {
+        $changes_json = json_encode($changes);
+        if ($changes_json === false) {
+            error_log("Failed to encode changes for goal $goal_id action $action");
+            $changes_json = json_encode(['error' => 'Failed to encode changes']);
+        }
+    }
+    
     $stmt = $pdo->prepare("
         INSERT INTO goal_history (goal_id, action, user_id, changes, created_at)
         VALUES (?, ?, ?, ?, NOW())
     ");
-    $stmt->execute([$goal_id, $action, $user_id, $changes ? json_encode($changes) : null]);
+    $stmt->execute([$goal_id, $action, $user_id, $changes_json]);
 }
 
 /**
@@ -310,13 +319,13 @@ try {
                 
                 // Delete removed steps
                 $to_delete = array_diff($existing_ids, $updated_ids);
-                if (!empty($to_delete)) {
+                if (!empty($to_delete) && count($to_delete) > 0) {
                     $placeholders = str_repeat('?,', count($to_delete) - 1) . '?';
                     $delete_stmt = $pdo->prepare("
                         DELETE FROM goal_steps 
                         WHERE goal_id = ? AND id IN ($placeholders)
                     ");
-                    $delete_stmt->execute(array_merge([$goal_id], $to_delete));
+                    $delete_stmt->execute(array_merge([$goal_id], array_values($to_delete)));
                 }
             }
             
