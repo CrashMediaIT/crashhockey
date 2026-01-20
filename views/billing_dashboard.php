@@ -646,7 +646,7 @@ new Chart(expenseCategoriesCtx, {
                 '#f59e0b',
                 '#10b981',
                 '#3b82f6',
-                '#8b5cf6',
+                '#6b46c1',
                 '#ec4899'
             ]
         }]

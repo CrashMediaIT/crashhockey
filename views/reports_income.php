@@ -320,7 +320,7 @@ td {
 }
 
 .badge-package {
-    background: #8b5cf6;
+    background: #6b46c1;
     color: white;
 }
 </style>
