@@ -2,6 +2,7 @@
 /**
  * Skills & Abilities Evaluation Platform (Type 2)
  * Comprehensive skills evaluation with scoring, notes, and media attachments
+ * Enhanced with Team Evaluation Mode for multi-athlete evaluation
  */
 
 require_once __DIR__ . '/../security.php';
@@ -9,13 +10,16 @@ require_once __DIR__ . '/../security.php';
 $current_user_id = $user_id;
 $current_user_role = $user_role;
 
+// Team Evaluation Mode toggle
+$team_mode = isset($_GET['team_mode']) && $_GET['team_mode'] === '1' && $isCoach;
+
 // Determine viewing athlete
 $viewing_athlete_id = $current_user_id;
 if ($isCoach && isset($_GET['athlete_id'])) {
     $viewing_athlete_id = intval($_GET['athlete_id']);
 }
 
-// Get athlete list for coaches
+// Get athlete list for coaches (including non-system athletes in team mode)
 $athletes = [];
 if ($isCoach) {
     $athletes = $pdo->query("
@@ -30,6 +34,34 @@ if ($isCoach) {
 $athlete_stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE id = ?");
 $athlete_stmt->execute([$viewing_athlete_id]);
 $athlete_info = $athlete_stmt->fetch();
+
+// In team mode, load all categories and skills for evaluation
+$all_categories = [];
+if ($team_mode) {
+    $cats_stmt = $pdo->query("
+        SELECT ec.*, 
+               (SELECT COUNT(*) FROM eval_skills WHERE category_id = ec.id AND is_active = 1) as skill_count
+        FROM eval_categories ec
+        WHERE ec.is_active = 1
+        ORDER BY ec.display_order
+    ");
+    $all_cats = $cats_stmt->fetchAll();
+    
+    foreach ($all_cats as $cat) {
+        $skills_stmt = $pdo->prepare("
+            SELECT * FROM eval_skills 
+            WHERE category_id = ? AND is_active = 1
+            ORDER BY display_order
+        ");
+        $skills_stmt->execute([$cat['id']]);
+        $all_categories[$cat['id']] = [
+            'name' => $cat['name'],
+            'description' => $cat['description'],
+            'order' => $cat['display_order'],
+            'skills' => $skills_stmt->fetchAll()
+        ];
+    }
+}
 
 // Get evaluation ID if viewing specific evaluation
 $eval_id = isset($_GET['eval_id']) ? intval($_GET['eval_id']) : null;
@@ -798,10 +830,24 @@ if ($eval_id && $evaluation) {
             <div>
                 <h1 class="page-title">
                     <i class="fas fa-clipboard-check"></i> Skills Evaluation
+                    <?php if ($team_mode): ?>
+                        <span style="font-size: 14px; font-weight: 600; color: var(--primary); margin-left: 10px;">(Team Mode)</span>
+                    <?php endif; ?>
                 </h1>
             </div>
             <div class="header-actions">
                 <?php if ($isCoach): ?>
+                    <!-- Team Mode Toggle -->
+                    <label style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        <input 
+                            type="checkbox" 
+                            <?= $team_mode ? 'checked' : '' ?>
+                            onchange="window.location.href='?page=evaluations_skills&team_mode=' + (this.checked ? '1' : '0') + '<?= $viewing_athlete_id != $current_user_id ? '&athlete_id=' . $viewing_athlete_id : '' ?><?= $eval_id ? '&eval_id=' . $eval_id : '' ?>'"
+                            style="width: 18px; height: 18px; cursor: pointer;"
+                        >
+                        <span>Team Evaluation Mode</span>
+                    </label>
+                    
                     <select class="athlete-selector" onchange="switchAthlete(this.value, <?= $eval_id ?>)">
                         <option value="">Quick Switch Athlete</option>
                         <?php foreach ($athletes as $ath): ?>
@@ -811,7 +857,7 @@ if ($eval_id && $evaluation) {
                         <?php endforeach; ?>
                     </select>
                 <?php endif; ?>
-                <a href="?page=evaluations_skills<?= $isCoach && $viewing_athlete_id != $current_user_id ? '&athlete_id=' . $viewing_athlete_id : '' ?>" class="btn-back">
+                <a href="?page=evaluations_skills<?= $isCoach && $viewing_athlete_id != $current_user_id ? '&athlete_id=' . $viewing_athlete_id : '' ?><?= $team_mode ? '&team_mode=1' : '' ?>" class="btn-back">
                     <i class="fas fa-arrow-left"></i> Back to List
                 </a>
             </div>
@@ -849,29 +895,90 @@ if ($eval_id && $evaluation) {
             </div>
             
             <!-- Skills Grid by Category -->
-            <?php foreach ($categories as $category): ?>
-                <div class="skills-category">
-                    <div class="category-header">
-                        <i class="fas fa-folder"></i> <?= htmlspecialchars($category['name']) ?>
-                    </div>
-                    
-                    <?php foreach ($category['skills'] as $skill): ?>
-                        <div class="skill-item" data-score-id="<?= $skill['id'] ?>">
-                            <div class="skill-header">
-                                <div style="flex: 1;">
-                                    <div class="skill-name"><?= htmlspecialchars($skill['skill_name']) ?></div>
-                                    <div class="skill-description"><?= htmlspecialchars($skill['skill_description']) ?></div>
-                                    <?php if ($skill['criteria']): ?>
-                                        <div class="skill-criteria">
-                                            <strong>Criteria:</strong> <?= htmlspecialchars($skill['criteria']) ?>
-                                        </div>
-                                    <?php endif; ?>
+            <?php if ($team_mode): ?>
+                <!-- Team Mode: All categories on one page, no tabs -->
+                <?php foreach ($all_categories as $cat_id => $category): ?>
+                    <div class="skills-category">
+                        <div class="category-header">
+                            <i class="fas fa-folder"></i> <?= htmlspecialchars($category['name']) ?>
+                            <?php if ($category['description']): ?>
+                                <span style="font-size: 14px; font-weight: 400; margin-left: 10px; color: var(--text-light);">
+                                    <?= htmlspecialchars($category['description']) ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <?php foreach ($category['skills'] as $skill): ?>
+                            <div class="skill-item" data-skill-id="<?= $skill['id'] ?>">
+                                <div class="skill-header">
+                                    <div style="flex: 1;">
+                                        <div class="skill-name"><?= htmlspecialchars($skill['name']) ?></div>
+                                        <div class="skill-description"><?= htmlspecialchars($skill['description']) ?></div>
+                                        <?php if ($skill['criteria']): ?>
+                                            <div class="skill-criteria">
+                                                <strong>Criteria:</strong> <?= htmlspecialchars($skill['criteria']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="score-input-wrapper">
+                                        <input 
+                                            type="number" 
+                                            class="score-input team-score-input" 
+                                            min="1" 
+                                            max="10" 
+                                            placeholder="—"
+                                            data-skill-id="<?= $skill['id'] ?>"
+                                            data-athlete-id="<?= $viewing_athlete_id ?>"
+                                        >
+                                        <span class="score-scale">/ 10</span>
+                                    </div>
                                 </div>
-                                <div class="score-input-wrapper">
-                                    <input 
-                                        type="number" 
-                                        class="score-input <?= $skill['score'] !== null ? 'has-score' : '' ?>" 
-                                        min="1" 
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+                
+                <!-- Save Button for Team Mode -->
+                <?php if ($isCoach): ?>
+                    <div style="margin-top: 30px; padding: 20px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 600;">
+                            <input 
+                                type="checkbox" 
+                                id="addAthleteToSystem" 
+                                style="width: 18px; height: 18px; cursor: pointer;"
+                            >
+                            <span>Add <?= htmlspecialchars($athlete_info['first_name'] . ' ' . $athlete_info['last_name']) ?> to database (if not already)</span>
+                        </label>
+                        <button class="btn-submit" onclick="saveTeamEvaluation()">
+                            <i class="fas fa-save"></i> Save Evaluation for <?= htmlspecialchars($athlete_info['first_name']) ?>
+                        </button>
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <!-- Regular Mode: Existing tabbed view -->
+                <?php foreach ($categories as $category): ?>
+                    <div class="skills-category">
+                        <div class="category-header">
+                            <i class="fas fa-folder"></i> <?= htmlspecialchars($category['name']) ?>
+                        </div>
+                        
+                        <?php foreach ($category['skills'] as $skill): ?>
+                            <div class="skill-item" data-score-id="<?= $skill['id'] ?>">
+                                <div class="skill-header">
+                                    <div style="flex: 1;">
+                                        <div class="skill-name"><?= htmlspecialchars($skill['skill_name']) ?></div>
+                                        <div class="skill-description"><?= htmlspecialchars($skill['skill_description']) ?></div>
+                                        <?php if ($skill['criteria']): ?>
+                                            <div class="skill-criteria">
+                                                <strong>Criteria:</strong> <?= htmlspecialchars($skill['criteria']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="score-input-wrapper">
+                                        <input 
+                                            type="number" 
+                                            class="score-input <?= $skill['score'] !== null ? 'has-score' : '' ?>" 
+                                            min="1" 
                                         max="10" 
                                         value="<?= $skill['score'] ?? '' ?>"
                                         placeholder="—"
@@ -947,6 +1054,7 @@ if ($eval_id && $evaluation) {
                     <?php endforeach; ?>
                 </div>
             <?php endforeach; ?>
+            <?php endif; ?> <!-- End team mode conditional -->
         </div>
         
         <!-- Historical Comparison -->
@@ -1392,6 +1500,60 @@ async function revokeShareLink(evalId) {
         }
     } catch (error) {
         alert('Error revoking access');
+    }
+}
+
+// Team Mode: Save evaluation for current athlete
+async function saveTeamEvaluation() {
+    const athleteId = <?= $viewing_athlete_id ?>;
+    const athleteName = '<?= htmlspecialchars($athlete_info['first_name'] . ' ' . $athlete_info['last_name']) ?>';
+    const addToDatabase = document.getElementById('addAthleteToSystem').checked;
+    
+    // Collect all scores
+    const scores = [];
+    document.querySelectorAll('.team-score-input').forEach(input => {
+        const scoreValue = input.value;
+        if (scoreValue && scoreValue !== '') {
+            scores.push({
+                skill_id: input.dataset.skillId,
+                score: parseInt(scoreValue)
+            });
+        }
+    });
+    
+    if (scores.length === 0) {
+        alert('Please enter at least one skill score before saving.');
+        return;
+    }
+    
+    if (!confirm(`Save ${scores.length} skill scores for ${athleteName}?`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'save_team_evaluation');
+    formData.append('athlete_id', athleteId);
+    formData.append('add_to_database', addToDatabase ? '1' : '0');
+    formData.append('scores', JSON.stringify(scores));
+    formData.append('csrf_token', '<?= generateCsrfToken() ?>');
+    
+    try {
+        const response = await fetch('process_eval_skills.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Evaluation saved successfully!');
+            // Keep same URL for easy athlete switching
+            location.reload();
+        } else {
+            alert('Error saving evaluation: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error saving evaluation. Please try again.');
     }
 }
 </script>

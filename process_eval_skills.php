@@ -441,6 +441,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'message' => 'Share link revoked'
                 ]);
                 break;
+            
+            case 'save_team_evaluation':
+                if (!$is_coach) {
+                    throw new Exception('Only coaches can save team evaluations');
+                }
+                
+                $athlete_id = intval($_POST['athlete_id'] ?? 0);
+                $add_to_database = ($_POST['add_to_database'] ?? '0') === '1';
+                $scores_json = $_POST['scores'] ?? '[]';
+                $scores = json_decode($scores_json, true);
+                
+                if (empty($scores)) {
+                    throw new Exception('No scores provided');
+                }
+                
+                // Check if athlete exists, create if requested
+                $athlete_check = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+                $athlete_check->execute([$athlete_id]);
+                $athlete_exists = $athlete_check->fetch();
+                
+                if (!$athlete_exists && $add_to_database) {
+                    throw new Exception('Athlete creation not implemented in this handler');
+                }
+                
+                if (!$athlete_exists) {
+                    throw new Exception('Athlete does not exist in database');
+                }
+                
+                $pdo->beginTransaction();
+                
+                try {
+                    // Create evaluation record
+                    $eval_stmt = $pdo->prepare("
+                        INSERT INTO athlete_evaluations (
+                            athlete_id, created_by, evaluation_date, 
+                            title, status, created_at
+                        ) VALUES (?, ?, CURDATE(), ?, 'completed', NOW())
+                    ");
+                    $eval_stmt->execute([
+                        $athlete_id,
+                        $user_id,
+                        'Team Evaluation - ' . date('Y-m-d')
+                    ]);
+                    
+                    $evaluation_id = $pdo->lastInsertId();
+                    
+                    // Insert scores
+                    $score_stmt = $pdo->prepare("
+                        INSERT INTO evaluation_scores (
+                            evaluation_id, skill_id, score, created_at
+                        ) VALUES (?, ?, ?, NOW())
+                    ");
+                    
+                    foreach ($scores as $score_data) {
+                        $score_stmt->execute([
+                            $evaluation_id,
+                            intval($score_data['skill_id']),
+                            intval($score_data['score'])
+                        ]);
+                    }
+                    
+                    $pdo->commit();
+                    
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Team evaluation saved successfully',
+                        'evaluation_id' => $evaluation_id
+                    ]);
+                    
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    throw $e;
+                }
+                break;
                 
             default:
                 throw new Exception('Invalid action');
