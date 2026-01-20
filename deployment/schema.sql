@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `last_name` VARCHAR(100) NOT NULL,
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
-  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin', 'parent') DEFAULT 'athlete',
+  `role` ENUM('athlete', 'coach', 'coach_plus', 'admin', 'parent', 'team_coach') DEFAULT 'athlete',
   `position` ENUM('forward', 'defense', 'goalie') DEFAULT NULL,
   `birth_date` DATE DEFAULT NULL,
   `weight` INT DEFAULT NULL COMMENT 'Weight in pounds',
@@ -1239,3 +1239,35 @@ INSERT IGNORE INTO `practice_plan_categories` (`name`, `description`, `display_o
 ('Conditioning', 'Physical fitness and endurance', 4),
 ('Skills', 'Fundamental skill development', 5),
 ('Game Prep', 'Pre-game preparation and tactics', 6);
+
+-- =========================================================
+-- TEAM COACHES ROLE TABLES
+-- =========================================================
+
+-- Seasons Table
+CREATE TABLE IF NOT EXISTS `seasons` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `is_active` BOOLEAN DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_active` (`is_active`),
+  INDEX `idx_dates` (`start_date`, `end_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Team Coach Assignments Table
+CREATE TABLE IF NOT EXISTS `team_coach_assignments` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `coach_id` INT NOT NULL,
+  `team_id` INT NOT NULL,
+  `season_id` INT NOT NULL,
+  `assigned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`coach_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`team_id`) REFERENCES `athlete_teams`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`season_id`) REFERENCES `seasons`(`id`) ON DELETE CASCADE,
+  INDEX `idx_coach` (`coach_id`),
+  INDEX `idx_team` (`team_id`),
+  INDEX `idx_season` (`season_id`),
+  UNIQUE KEY `unique_coach_team_season` (`coach_id`, `team_id`, `season_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

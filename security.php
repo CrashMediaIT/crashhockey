@@ -226,3 +226,81 @@ function logSecurityEvent($pdo, $event_type, $description, $user_id = null) {
         // Silently fail if logging table doesn't exist yet
     }
 }
+
+/**
+ * Get teams accessible by team coach
+ * Returns array of team IDs the coach is assigned to in active seasons
+ */
+function getTeamCoachTeams($pdo, $coach_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT tca.team_id
+            FROM team_coach_assignments tca
+            INNER JOIN seasons s ON tca.season_id = s.id
+            WHERE tca.coach_id = ? AND s.is_active = 1
+        ");
+        $stmt->execute([$coach_id]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Get athletes visible to team coach
+ * Returns array of athlete IDs based on team assignments
+ */
+function getTeamCoachAthletes($pdo, $coach_id) {
+    $teams = getTeamCoachTeams($pdo, $coach_id);
+    
+    if (empty($teams)) {
+        return [];
+    }
+    
+    try {
+        $placeholders = implode(',', array_fill(0, count($teams), '?'));
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT at.user_id
+            FROM athlete_teams at
+            WHERE at.id IN ($placeholders) AND at.is_current = 1
+        ");
+        $stmt->execute($teams);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * Check if team coach can access athlete
+ */
+function teamCoachCanAccessAthlete($pdo, $coach_id, $athlete_id) {
+    $accessible_athletes = getTeamCoachAthletes($pdo, $coach_id);
+    return in_array($athlete_id, $accessible_athletes);
+}
+
+/**
+ * Apply team coach restrictions to query
+ * Modifies WHERE clause to restrict data to assigned teams/athletes
+ */
+function applyTeamCoachRestrictions($pdo, $user_id, $user_role, &$where_clauses, &$params, $athlete_table_alias = 'u') {
+    if ($user_role === 'team_coach') {
+        $athlete_ids = getTeamCoachAthletes($pdo, $user_id);
+        
+        if (empty($athlete_ids)) {
+            // No athletes accessible, return impossible condition
+            $where_clauses[] = "1 = 0";
+        } else {
+            $placeholders = implode(',', array_fill(0, count($athlete_ids), '?'));
+            $where_clauses[] = "$athlete_table_alias.id IN ($placeholders)";
+            $params = array_merge($params, $athlete_ids);
+        }
+    }
+}
+
+/**
+ * Get CSRF token (alias for backwards compatibility)
+ */
+function csrfTokenValidate($token) {
+    return validateCsrfToken($token);
+}

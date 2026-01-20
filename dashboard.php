@@ -68,7 +68,8 @@ $allowed_pages = [
     'evaluations_goals'   => 'views/evaluations_goals.php',
     'evaluations_skills'  => 'views/evaluations_skills.php',
     'admin_settings'      => 'views/admin_settings.php',
-    'admin_eval_framework' => 'views/admin_eval_framework.php'
+    'admin_eval_framework' => 'views/admin_eval_framework.php',
+    'admin_team_coaches'  => 'views/admin_team_coaches.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
