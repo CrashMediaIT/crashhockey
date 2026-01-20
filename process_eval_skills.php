@@ -283,8 +283,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     mkdir($upload_dir, 0755, true);
                 }
                 
-                // Generate unique filename
-                $filename = uniqid() . '_' . time() . '.' . $file_ext;
+                // Generate unique filename with random bytes
+                $filename = bin2hex(random_bytes(16)) . '.' . $file_ext;
                 $filepath = $upload_dir . '/' . $filename;
                 
                 // Move file
