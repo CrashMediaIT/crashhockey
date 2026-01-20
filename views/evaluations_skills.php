@@ -842,7 +842,7 @@ if ($eval_id && $evaluation) {
                         <input 
                             type="checkbox" 
                             <?= $team_mode ? 'checked' : '' ?>
-                            onchange="window.location.href='?page=evaluations_skills&team_mode=' + (this.checked ? '1' : '0') + '<?= $viewing_athlete_id != $current_user_id ? '&athlete_id=' . $viewing_athlete_id : '' ?><?= $eval_id ? '&eval_id=' . $eval_id : '' ?>'"
+                            onchange="toggleTeamMode(this.checked, <?= json_encode($viewing_athlete_id != $current_user_id ? $viewing_athlete_id : null) ?>, <?= json_encode($eval_id) ?>)"
                             style="width: 18px; height: 18px; cursor: pointer;"
                         >
                         <span>Team Evaluation Mode</span>
@@ -1235,6 +1235,15 @@ if ($eval_id && $evaluation) {
 </div>
 
 <script>
+function toggleTeamMode(isChecked, athleteId, evalId) {
+    const params = new URLSearchParams();
+    params.set('page', 'evaluations_skills');
+    params.set('team_mode', isChecked ? '1' : '0');
+    if (athleteId) params.set('athlete_id', athleteId);
+    if (evalId) params.set('eval_id', evalId);
+    window.location = '?' + params.toString();
+}
+
 function switchAthlete(athleteId, evalId = null) {
     if (!athleteId) return;
     const params = new URLSearchParams();

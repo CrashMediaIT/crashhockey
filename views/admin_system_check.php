@@ -8,7 +8,8 @@ require_once __DIR__ . '/../security.php';
 
 // Only admins can access this page
 if ($user_role !== 'admin') {
-    die('Access denied. Admin privileges required.');
+    header('Location: dashboard.php?page=home&error=' . urlencode('Admin privileges required to access system checks.'));
+    exit;
 }
 ?>
 

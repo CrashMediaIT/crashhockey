@@ -368,6 +368,9 @@ class SystemValidator {
             $filename = basename($php_file);
             
             // Check for unsafe SQL patterns
+            // Note: This regex-based check may have false positives (e.g., when matching against
+            // comments or in string literals). Results should be reviewed manually. For accurate
+            // detection, use static analysis tools like PHP CodeSniffer with security rules.
             if (preg_match('/\$pdo->query\([^?]*\$_/', $content)) {
                 $checks['sql_injection'][] = [
                     'file' => $filename,

@@ -6,6 +6,25 @@
 
 require_once __DIR__ . '/../security.php';
 
+/**
+ * Format athlete position to proper title case
+ * Maps lowercase position values to proper display format
+ */
+function formatPosition($position) {
+    $position_map = [
+        'forward' => 'Forward',
+        'defense' => 'Defense',
+        'goalie' => 'Goalie'
+    ];
+    
+    // For known positions, return directly. For unknown, escape and format
+    $lower_position = strtolower($position ?? '');
+    if (isset($position_map[$lower_position])) {
+        return $position_map[$lower_position];
+    }
+    return htmlspecialchars(ucfirst($position));
+}
+
 // Check if user has permission
 if (!in_array($user_role, ['coach', 'coach_plus', 'admin'])) {
     header('Location: dashboard.php?page=home');
@@ -248,7 +267,7 @@ $athletes = $athletes_stmt->fetchAll();
                         <?php if ($athlete['position']): ?>
                             <div class="athlete-meta">
                                 <i class="fas fa-hockey-puck"></i>
-                                <?= htmlspecialchars(ucfirst($athlete['position'])) ?>
+                                <?= formatPosition($athlete['position']) ?>
                             </div>
                         <?php endif; ?>
                         <?php if ($athlete['birth_date']): ?>
