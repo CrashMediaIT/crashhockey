@@ -340,6 +340,7 @@ $sessions = $sessions_stmt->fetchAll();
             <?= csrfTokenInput() ?>
             <input type="hidden" name="action" value="process_refund">
             <input type="hidden" name="booking_id" id="refundBookingId">
+            <input type="hidden" id="refundUserId" value="">
             
             <div class="form-group">
                 <label>Customer</label>
@@ -357,25 +358,61 @@ $sessions = $sessions_stmt->fetchAll();
             </div>
             
             <div class="form-group">
-                <label>Refund Type</label>
-                <select name="refund_type" id="refundType" onchange="updateRefundAmount()" required>
-                    <option value="full">Full Refund</option>
-                    <option value="partial">Partial Refund</option>
+                <label>Refund Method</label>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; border: 2px solid transparent;" onclick="selectMethod('refund')">
+                        <input type="radio" name="method" value="refund" id="methodRefund" checked onchange="updateMethodFields()">
+                        <div>
+                            <strong>Refund to Payment Method</strong>
+                            <p style="margin: 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">Refund via Stripe (5-10 business days)</p>
+                        </div>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; border: 2px solid transparent;" onclick="selectMethod('credit')">
+                        <input type="radio" name="method" value="credit" id="methodCredit" onchange="updateMethodFields()">
+                        <div>
+                            <strong>Issue Store Credit</strong>
+                            <p style="margin: 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">Credit for future bookings (faster, 365 days expiry)</p>
+                        </div>
+                    </label>
+                    
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; border: 2px solid transparent;" onclick="selectMethod('exchange')">
+                        <input type="radio" name="method" value="exchange" id="methodExchange" onchange="updateMethodFields()">
+                        <div>
+                            <strong>Exchange for Different Session</strong>
+                            <p style="margin: 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">Move booking to another session</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Refund Amount Field (for refund/credit) -->
+            <div class="form-group" id="amountField">
+                <label id="amountLabel">Refund Amount</label>
+                <input type="number" name="refund_amount" id="refundAmount" step="0.01" min="0.01">
+            </div>
+            
+            <!-- Credit Expiry Preview -->
+            <div class="form-group" id="creditExpiryField" style="display: none;">
+                <label>Credit Expiry</label>
+                <input type="text" id="creditExpiry" readonly style="background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.7);" value="365 days from now">
+            </div>
+            
+            <!-- Exchange Session Selector -->
+            <div class="form-group" id="exchangeSessionField" style="display: none;">
+                <label>Exchange to Session</label>
+                <select name="exchange_session_id" id="exchangeSession">
+                    <option value="">-- Select Session --</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label>Refund Amount</label>
-                <input type="number" name="refund_amount" id="refundAmount" step="0.01" min="0.01" required>
-            </div>
-            
-            <div class="form-group">
                 <label>Reason</label>
-                <textarea name="reason" rows="3" required placeholder="Enter reason for refund" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: white; font-family: inherit;"></textarea>
+                <textarea name="reason" rows="3" required placeholder="Enter reason for refund/credit/exchange" style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; color: white; font-family: inherit;"></textarea>
             </div>
             
             <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;" id="submitBtn">
                     <i class="fas fa-check"></i> Process Refund
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="closeRefundModal()">
@@ -388,6 +425,7 @@ $sessions = $sessions_stmt->fetchAll();
 
 <script>
 let currentBookingAmount = 0;
+let upcomingSessions = [];
 
 function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -463,15 +501,88 @@ function displayBookings(bookings) {
     container.innerHTML = html;
 }
 
+async function loadUpcomingSessions() {
+    try {
+        const response = await fetch('process_refunds.php?action=get_upcoming_sessions');
+        const result = await response.json();
+        if (result.success) {
+            upcomingSessions = result.sessions;
+        }
+    } catch (error) {
+        console.error('Failed to load upcoming sessions:', error);
+    }
+}
+
+function selectMethod(method) {
+    document.getElementById('methodRefund').checked = (method === 'refund');
+    document.getElementById('methodCredit').checked = (method === 'credit');
+    document.getElementById('methodExchange').checked = (method === 'exchange');
+    updateMethodFields();
+}
+
+function updateMethodFields() {
+    const method = document.querySelector('input[name="method"]:checked').value;
+    const amountField = document.getElementById('amountField');
+    const amountLabel = document.getElementById('amountLabel');
+    const creditExpiryField = document.getElementById('creditExpiryField');
+    const exchangeSessionField = document.getElementById('exchangeSessionField');
+    const refundAmount = document.getElementById('refundAmount');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Update button text and icon
+    if (method === 'refund') {
+        submitBtn.innerHTML = '<i class="fas fa-undo"></i> Process Refund';
+        amountLabel.textContent = 'Refund Amount';
+        amountField.style.display = 'block';
+        creditExpiryField.style.display = 'none';
+        exchangeSessionField.style.display = 'none';
+        refundAmount.required = true;
+        refundAmount.value = currentBookingAmount.toFixed(2);
+    } else if (method === 'credit') {
+        submitBtn.innerHTML = '<i class="fas fa-coins"></i> Issue Store Credit';
+        amountLabel.textContent = 'Credit Amount';
+        amountField.style.display = 'block';
+        creditExpiryField.style.display = 'block';
+        exchangeSessionField.style.display = 'none';
+        refundAmount.required = true;
+        refundAmount.value = currentBookingAmount.toFixed(2);
+    } else if (method === 'exchange') {
+        submitBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Process Exchange';
+        amountField.style.display = 'none';
+        creditExpiryField.style.display = 'none';
+        exchangeSessionField.style.display = 'block';
+        refundAmount.required = false;
+        
+        // Populate exchange session dropdown
+        const select = document.getElementById('exchangeSession');
+        select.innerHTML = '<option value="">-- Select Session --</option>';
+        upcomingSessions.forEach(session => {
+            select.innerHTML += `<option value="${session.id}">
+                ${session.title} - ${new Date(session.session_date).toLocaleDateString()} ${session.session_time}
+            </option>`;
+        });
+    }
+    
+    // Update radio button styles
+    document.querySelectorAll('label[onclick]').forEach(label => {
+        label.style.borderColor = 'transparent';
+    });
+    document.querySelector(`label[onclick="selectMethod('${method}')"]`).style.borderColor = 'var(--primary)';
+}
+
 function openRefundModal(booking) {
     document.getElementById('refundBookingId').value = booking.id;
+    document.getElementById('refundUserId').value = booking.user_id;
     document.getElementById('refundCustomer').value = `${booking.first_name} ${booking.last_name} (${booking.email})`;
     document.getElementById('refundSession').value = booking.session_name;
     document.getElementById('refundOriginalAmount').value = `$${parseFloat(booking.amount_paid).toFixed(2)}`;
     document.getElementById('refundAmount').value = parseFloat(booking.amount_paid).toFixed(2);
-    document.getElementById('refundType').value = 'full';
     
     currentBookingAmount = parseFloat(booking.amount_paid);
+    
+    // Reset to refund method
+    document.getElementById('methodRefund').checked = true;
+    updateMethodFields();
     
     document.getElementById('refundModal').classList.add('active');
 }
@@ -481,23 +592,21 @@ function closeRefundModal() {
     document.getElementById('refundForm').reset();
 }
 
-function updateRefundAmount() {
-    const type = document.getElementById('refundType').value;
-    const amountField = document.getElementById('refundAmount');
-    
-    if (type === 'full') {
-        amountField.value = currentBookingAmount.toFixed(2);
-        amountField.max = currentBookingAmount;
-    } else {
-        amountField.value = '';
-        amountField.max = currentBookingAmount;
-    }
-}
-
 document.getElementById('refundForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    if (!confirm('Are you sure you want to process this refund? This action cannot be undone.')) {
+    const method = document.querySelector('input[name="method"]:checked').value;
+    let confirmMsg = '';
+    
+    if (method === 'refund') {
+        confirmMsg = 'Are you sure you want to process this refund? This action cannot be undone.';
+    } else if (method === 'credit') {
+        confirmMsg = 'Are you sure you want to issue store credit instead of a refund?';
+    } else if (method === 'exchange') {
+        confirmMsg = 'Are you sure you want to exchange this booking for a different session?';
+    }
+    
+    if (!confirm(confirmMsg)) {
         return;
     }
     
@@ -512,14 +621,17 @@ document.getElementById('refundForm').addEventListener('submit', async function(
         const result = await response.json();
         
         if (result.success) {
-            alert('Refund processed successfully!');
+            const successMsg = method === 'refund' ? 'Refund processed successfully!' :
+                             method === 'credit' ? 'Store credit issued successfully!' :
+                             'Booking exchange completed successfully!';
+            alert(successMsg);
             closeRefundModal();
             searchBookings();
         } else {
             alert('Error: ' + result.message);
         }
     } catch (error) {
-        alert('Error processing refund: ' + error.message);
+        alert('Error processing request: ' + error.message);
     }
 });
 
@@ -556,7 +668,7 @@ function displayRefundHistory(refunds) {
     }
     
     let html = '<table class="results-table"><thead><tr>';
-    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Original</th><th>Refunded</th><th>Status</th><th>Reason</th><th>Processed By</th>';
+    html += '<th>Date</th><th>Customer</th><th>Session</th><th>Method</th><th>Original</th><th>Amount</th><th>Status</th><th>Reason</th><th>Processed By</th>';
     html += '</tr></thead><tbody>';
     
     refunds.forEach(refund => {
@@ -564,9 +676,25 @@ function displayRefundHistory(refunds) {
         html += `<td>${new Date(refund.refund_date).toLocaleDateString()}</td>`;
         html += `<td>${refund.first_name} ${refund.last_name}<br><small style="color: rgba(255,255,255,0.5)">${refund.email}</small></td>`;
         html += `<td>${refund.session_name || 'N/A'}</td>`;
+        
+        // Method badge
+        let methodBadge = '';
+        if (refund.refund_type === 'refund') {
+            methodBadge = '<span class="badge badge-info">Refund</span>';
+        } else if (refund.refund_type === 'credit') {
+            methodBadge = '<span class="badge badge-success">Credit</span>';
+        } else if (refund.refund_type === 'exchange') {
+            methodBadge = '<span class="badge badge-warning">Exchange</span>';
+        }
+        html += `<td>${methodBadge}</td>`;
+        
         html += `<td>$${parseFloat(refund.original_amount).toFixed(2)}</td>`;
-        html += `<td>$${parseFloat(refund.refund_amount).toFixed(2)}</td>`;
-        html += `<td><span class="badge badge-info">${refund.status}</span></td>`;
+        
+        // Amount (show credit amount if applicable)
+        const displayAmount = refund.refund_type === 'credit' ? refund.credit_amount : refund.refund_amount;
+        html += `<td>$${parseFloat(displayAmount).toFixed(2)}</td>`;
+        
+        html += `<td><span class="badge badge-success">${refund.status}</span></td>`;
         html += `<td>${refund.refund_reason}</td>`;
         html += `<td>${refund.processed_by_name}</td>`;
         html += '</tr>';
@@ -585,5 +713,6 @@ function exportRefunds() {
 // Load initial data
 document.addEventListener('DOMContentLoaded', function() {
     searchBookings();
+    loadUpcomingSessions();
 });
 </script>

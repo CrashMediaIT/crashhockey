@@ -70,6 +70,17 @@ $sessions = $stmt->fetchAll();
 $settings = $pdo->query("SELECT * FROM system_settings")->fetchAll(PDO::FETCH_KEY_PAIR);
 $tax_rate = floatval($settings['tax_rate'] ?? 13.00);
 $tax_name = $settings['tax_name'] ?? 'HST';
+
+// Get user's available store credits
+$user_credits_stmt = $pdo->prepare("
+    SELECT COALESCE(SUM(remaining_amount), 0) as total_credits
+    FROM user_credits
+    WHERE user_id = ? 
+    AND remaining_amount > 0 
+    AND (expiry_date IS NULL OR expiry_date >= CURDATE())
+");
+$user_credits_stmt->execute([$user_id]);
+$available_credits = floatval($user_credits_stmt->fetchColumn());
 ?>
 
 <style>
@@ -342,6 +353,18 @@ $tax_name = $settings['tax_name'] ?? 'HST';
         <i class="fas fa-calendar-check"></i> Book Sessions
     </h1>
     <p class="page-subtitle">Browse and book upcoming training sessions</p>
+    
+    <?php if ($available_credits > 0): ?>
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; padding: 15px; margin-top: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.9); font-weight: 600;">Available Store Credits</div>
+                <div style="font-size: 1.5rem; color: white; font-weight: 900; margin-top: 5px;">$<?= number_format($available_credits, 2) ?></div>
+            </div>
+            <a href="dashboard.php?page=user_credits" style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+                <i class="fas fa-wallet"></i> View Credits
+            </a>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Filters -->
@@ -478,9 +501,23 @@ $tax_name = $settings['tax_name'] ?? 'HST';
                             <i class="fas fa-ticket-alt"></i> Book Session
                         </button>
                     <?php else: ?>
-                        <form method="POST" action="process_booking.php" style="margin: 0;">
+                        <form method="POST" action="process_booking.php" style="margin: 0;" id="singleBookingForm<?= $session['id'] ?>">
                             <?= csrfTokenInput() ?>
                             <input type="hidden" name="session_id" value="<?= $session['id'] ?>">
+                            <input type="hidden" name="apply_credits" value="0" id="apply_credits_<?= $session['id'] ?>">
+                            
+                            <?php if ($available_credits > 0): ?>
+                                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 0.85rem;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                                        <input type="checkbox" onchange="document.getElementById('apply_credits_<?= $session['id'] ?>').value = this.checked ? '1' : '0'; updateSinglePrice(<?= $session['id'] ?>, <?= $session['price'] ?>, this.checked)">
+                                        <span style="color: #10b981; font-weight: 600;">
+                                            Use $<?= number_format(min($available_credits, $session['price']), 2) ?> credit
+                                        </span>
+                                    </label>
+                                    <div id="price_info_<?= $session['id'] ?>" style="margin-top: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.7);"></div>
+                                </div>
+                            <?php endif; ?>
+                            
                             <button type="submit" class="btn-book">
                                 <i class="fas fa-ticket-alt"></i> Book Session
                             </button>
@@ -504,6 +541,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
         <form method="POST" action="process_booking.php" id="bookingForm">
             <?= csrfTokenInput() ?>
             <input type="hidden" name="session_id" id="modal_session_id">
+            <input type="hidden" name="apply_credits" id="apply_credits" value="0">
             
             <div style="margin-bottom: 20px;">
                 <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 5px;" id="modal_session_title"></div>
@@ -516,7 +554,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
             <div class="athlete-checkbox-group">
                 <?php foreach ($managed_athletes as $athlete): ?>
                     <label class="athlete-checkbox">
-                        <input type="checkbox" name="athlete_ids[]" value="<?= $athlete['id'] ?>">
+                        <input type="checkbox" name="athlete_ids[]" value="<?= $athlete['id'] ?>" onchange="calculateTotal()">
                         <span class="athlete-checkbox-label">
                             <?= htmlspecialchars($athlete['first_name'] . ' ' . $athlete['last_name']) ?>
                         </span>
@@ -524,12 +562,49 @@ $tax_name = $settings['tax_name'] ?? 'HST';
                 <?php endforeach; ?>
             </div>
             
+            <?php if ($available_credits > 0): ?>
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 15px; margin-top: 20px;">
+                    <label class="athlete-checkbox" style="background: transparent; border: none; margin: 0;">
+                        <input type="checkbox" id="applyCreditsCheckbox" onchange="toggleCredits()">
+                        <span class="athlete-checkbox-label">
+                            Apply store credit ($<?= number_format($available_credits, 2) ?> available)
+                        </span>
+                    </label>
+                </div>
+            <?php endif; ?>
+            
             <div style="margin-top: 20px;">
                 <label class="form-label">Discount Code (Optional)</label>
                 <input type="text" name="discount_code" class="discount-input" placeholder="Enter discount code">
             </div>
             
-            <button type="submit" class="btn-book" style="margin-top: 20px;">
+            <div id="priceBreakdown" style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 15px; margin-top: 20px; display: none;">
+                <div style="font-size: 14px; color: #94a3b8; font-weight: 600; margin-bottom: 12px;">Price Breakdown</div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #94a3b8;">Session Price:</span>
+                    <span style="color: white; font-weight: 600;">$<span id="breakdown_subtotal">0.00</span></span>
+                </div>
+                <div id="creditRow" style="display: none; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #10b981;">Credit Applied:</span>
+                        <span style="color: #10b981; font-weight: 600;">-$<span id="breakdown_credit">0.00</span></span>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #94a3b8;">Subtotal:</span>
+                    <span style="color: white; font-weight: 600;">$<span id="breakdown_after_credit">0.00</span></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="color: #94a3b8;"><?= $tax_name ?> (<?= $tax_rate ?>%):</span>
+                    <span style="color: white; font-weight: 600;">$<span id="breakdown_tax">0.00</span></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 16px;">
+                    <span style="color: white; font-weight: 700;">Total:</span>
+                    <span style="color: var(--primary); font-weight: 900; font-size: 18px;">$<span id="breakdown_total">0.00</span></span>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-book" style="margin-top: 20px;" id="checkoutBtn">
                 <i class="fas fa-ticket-alt"></i> Proceed to Payment
             </button>
         </form>
@@ -538,6 +613,28 @@ $tax_name = $settings['tax_name'] ?? 'HST';
 <?php endif; ?>
 
 <script>
+const taxRate = <?= floatval($tax_rate) ?>;
+const availableCredits = <?= floatval($available_credits) ?>;
+
+function updateSinglePrice(sessionId, sessionPrice, applyCredit) {
+    const priceInfo = document.getElementById('price_info_' + sessionId);
+    
+    if (applyCredit) {
+        const creditToUse = Math.min(availableCredits, sessionPrice);
+        const afterCredit = Math.max(0, sessionPrice - creditToUse);
+        const tax = afterCredit * (taxRate / 100);
+        const total = afterCredit + tax;
+        
+        if (total <= 0.01) {
+            priceInfo.innerHTML = '<strong style="color: #10b981;">✓ Free with credits!</strong>';
+        } else {
+            priceInfo.innerHTML = 'New total: <strong style="color: #fff;">$' + total.toFixed(2) + '</strong>';
+        }
+    } else {
+        priceInfo.innerHTML = '';
+    }
+}
+
 function applyFilters(select, filterType) {
     const url = new URL(window.location);
     const value = select.value;
@@ -552,19 +649,71 @@ function applyFilters(select, filterType) {
 }
 
 <?php if ($isParent && count($managed_athletes) > 0): ?>
+let sessionPricePerAthlete = 0;
+
 function openBookingModal(sessionId, sessionTitle, sessionPrice) {
     document.getElementById('modal_session_id').value = sessionId;
     document.getElementById('modal_session_title').textContent = sessionTitle;
-    var taxRate = <?= floatval($tax_rate) ?>;
+    sessionPricePerAthlete = sessionPrice;
     document.getElementById('modal_session_price').textContent = (sessionPrice * (1 + taxRate / 100)).toFixed(2);
     document.getElementById('bookingModal').classList.add('active');
     
     // Uncheck all checkboxes
     document.querySelectorAll('input[name="athlete_ids[]"]').forEach(cb => cb.checked = false);
+    if (document.getElementById('applyCreditsCheckbox')) {
+        document.getElementById('applyCreditsCheckbox').checked = false;
+    }
+    document.getElementById('apply_credits').value = '0';
+    document.getElementById('priceBreakdown').style.display = 'none';
 }
 
 function closeBookingModal() {
     document.getElementById('bookingModal').classList.remove('active');
+}
+
+function toggleCredits() {
+    const isChecked = document.getElementById('applyCreditsCheckbox').checked;
+    document.getElementById('apply_credits').value = isChecked ? '1' : '0';
+    calculateTotal();
+}
+
+function calculateTotal() {
+    const checkedBoxes = document.querySelectorAll('input[name="athlete_ids[]"]:checked');
+    const numAthletes = checkedBoxes.length;
+    
+    if (numAthletes === 0) {
+        document.getElementById('priceBreakdown').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('priceBreakdown').style.display = 'block';
+    
+    const subtotal = sessionPricePerAthlete * numAthletes;
+    const applyCredit = document.getElementById('apply_credits').value === '1';
+    const creditToApply = applyCredit ? Math.min(availableCredits, subtotal) : 0;
+    const afterCredit = Math.max(0, subtotal - creditToApply);
+    const tax = afterCredit * (taxRate / 100);
+    const total = afterCredit + tax;
+    
+    document.getElementById('breakdown_subtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('breakdown_credit').textContent = creditToApply.toFixed(2);
+    document.getElementById('breakdown_after_credit').textContent = afterCredit.toFixed(2);
+    document.getElementById('breakdown_tax').textContent = tax.toFixed(2);
+    document.getElementById('breakdown_total').textContent = total.toFixed(2);
+    
+    if (creditToApply > 0) {
+        document.getElementById('creditRow').style.display = 'block';
+    } else {
+        document.getElementById('creditRow').style.display = 'none';
+    }
+    
+    // Update button text
+    const btn = document.getElementById('checkoutBtn');
+    if (total <= 0.01) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Complete Booking (Free with Credits)';
+    } else {
+        btn.innerHTML = '<i class="fas fa-ticket-alt"></i> Proceed to Payment ($' + total.toFixed(2) + ')';
+    }
 }
 
 // Close modal when clicking outside

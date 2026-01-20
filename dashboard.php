@@ -31,6 +31,7 @@ $allowed_pages = [
     'schedule'            => 'views/schedule.php',
     'session_history'     => 'views/session_history.php',
     'payment_history'     => 'views/payment_history.php',
+    'user_credits'        => 'views/user_credits.php',
     'profile'             => 'views/profile.php',
     'video_library'       => 'views/video.php',
     'workout_builder'     => 'views/workouts.php',
@@ -191,6 +192,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <nav class="nav-menu">
             <a href="?page=session_history" class="nav-link <?= $page=='session_history'?'active':'' ?>"><i class="fa-solid fa-clock-rotate-left"></i> Session History</a>
             <a href="?page=payment_history" class="nav-link <?= $page=='payment_history'?'active':'' ?>"><i class="fa-solid fa-credit-card"></i> Payment History</a>
+            <a href="?page=user_credits" class="nav-link <?= $page=='user_credits'?'active':'' ?>"><i class="fa-solid fa-wallet"></i> My Store Credits</a>
             <a href="?page=packages" class="nav-link <?= $page=='packages'?'active':'' ?>"><i class="fa-solid fa-box"></i> Session Packages</a>
         </nav>
     </div>

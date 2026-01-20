@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `original_price` DECIMAL(10,2) NOT NULL,
   `tax_amount` DECIMAL(10,2) DEFAULT 0.00,
   `discount_code` VARCHAR(50) DEFAULT NULL,
+  `credit_applied` DECIMAL(10,2) DEFAULT 0.00,
   `booked_for_user_id` INT DEFAULT NULL,
   `payment_type` ENUM('session', 'package') DEFAULT 'session',
   `status` ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',

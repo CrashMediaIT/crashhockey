@@ -20,6 +20,18 @@ $user_id = $_SESSION['user_id'];
 
 try {
     switch ($action) {
+        case 'get_upcoming_sessions':
+            $stmt = $pdo->query("
+                SELECT id, title, session_date, session_time
+                FROM sessions
+                WHERE session_date >= CURDATE()
+                ORDER BY session_date ASC, session_time ASC
+                LIMIT 100
+            ");
+            $sessions = $stmt->fetchAll();
+            echo json_encode(['success' => true, 'sessions' => $sessions]);
+            break;
+            
         case 'search_bookings':
             $email = $_GET['email'] ?? '';
             $session_id = $_GET['session_id'] ?? '';
@@ -210,10 +222,11 @@ try {
             }
             
             // Send notification based on method
+            $expiry_text = isset($expiry_date) ? date('M j, Y', strtotime($expiry_date)) : '';
             $notification_messages = [
                 'refund' => "Your refund of $" . number_format($refund_amount, 2) . " has been processed.",
-                'credit' => "You have been issued $" . number_format($credit_amount, 2) . " in store credit (expires " . date('M j, Y', strtotime($expiry_date)) . ").",
-                'exchange' => "Your booking has been exchanged for {$exchange_session['title']}."
+                'credit' => "You have been issued $" . number_format($credit_amount, 2) . " in store credit" . ($expiry_text ? " (expires $expiry_text)" : "") . ".",
+                'exchange' => "Your booking has been exchanged for a different session."
             ];
             
             createNotification(
@@ -222,12 +235,26 @@ try {
                 'refund',
                 ucfirst($method) . ' Processed',
                 $notification_messages[$method] . " Reason: $reason",
-                "dashboard.php?page=payment_history",
+                $method === 'credit' ? "dashboard.php?page=user_credits" : "dashboard.php?page=payment_history",
                 false
             );
             
             // Send email
-            sendRefundEmail($booking['email'], $booking['first_name'], $refund_amount, $credit_amount, $booking['session_name'], $reason, $method);
+            $exchange_session_name = '';
+            if ($method === 'exchange' && isset($exchange_session)) {
+                $exchange_session_name = $exchange_session['title'];
+            }
+            sendRefundEmail(
+                $booking['email'], 
+                $booking['first_name'], 
+                $refund_amount, 
+                $credit_amount, 
+                $booking['session_name'], 
+                $reason, 
+                $method,
+                $expiry_text,
+                $exchange_session_name
+            );
             
             echo json_encode([
                 'success' => true, 
@@ -346,31 +373,73 @@ function processStripeRefund($payment_intent_id, $amount, $secret_key) {
 /**
  * Send refund email to customer
  */
-function sendRefundEmail($to_email, $name, $amount, $session_name, $reason) {
-    $subject = 'Refund Processed - Crash Hockey';
-    
-    $body = "
-    <html>
-    <body style='font-family: Arial, sans-serif; color: #333;'>
-        <h2 style='color: #ff4d00;'>Refund Processed</h2>
-        <p>Hi $name,</p>
-        <p>Your refund has been processed successfully.</p>
-        <div style='background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;'>
-            <strong>Refund Amount:</strong> $" . number_format($amount, 2) . "<br>
-            <strong>Session:</strong> " . htmlspecialchars($session_name) . "<br>
-            <strong>Reason:</strong> " . htmlspecialchars($reason) . "
-        </div>
-        <p>The refund will appear in your account within 5-10 business days.</p>
-        <p>If you have any questions, please contact us.</p>
-        <p>Best regards,<br>Crash Hockey Team</p>
-    </body>
-    </html>
-    ";
+function sendRefundEmail($to_email, $name, $refund_amount, $credit_amount, $session_name, $reason, $method, $expiry_date = '', $exchange_session_name = '') {
+    if ($method === 'refund') {
+        $subject = 'Refund Processed - Crash Hockey';
+        $body = "
+        <html>
+        <body style='font-family: Arial, sans-serif; color: #333;'>
+            <h2 style='color: #ff4d00;'>Refund Processed</h2>
+            <p>Hi $name,</p>
+            <p>Your refund has been processed successfully.</p>
+            <div style='background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                <strong>Refund Amount:</strong> $" . number_format($refund_amount, 2) . "<br>
+                <strong>Session:</strong> " . htmlspecialchars($session_name) . "<br>
+                <strong>Reason:</strong> " . htmlspecialchars($reason) . "
+            </div>
+            <p>The refund will appear in your account within 5-10 business days.</p>
+            <p>If you have any questions, please contact us.</p>
+            <p>Best regards,<br>Crash Hockey Team</p>
+        </body>
+        </html>
+        ";
+    } elseif ($method === 'credit') {
+        $subject = 'Store Credit Issued - Crash Hockey';
+        $body = "
+        <html>
+        <body style='font-family: Arial, sans-serif; color: #333;'>
+            <h2 style='color: #ff4d00;'>Store Credit Issued</h2>
+            <p>Hi $name,</p>
+            <p>You have been issued store credit instead of a refund.</p>
+            <div style='background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                <strong>Credit Amount:</strong> $" . number_format($credit_amount, 2) . "<br>
+                <strong>Original Session:</strong> " . htmlspecialchars($session_name) . "<br>
+                " . ($expiry_date ? "<strong>Expiry Date:</strong> $expiry_date<br>" : "") . "
+                <strong>Reason:</strong> " . htmlspecialchars($reason) . "
+            </div>
+            <p>This credit can be applied to any future booking. It will be automatically available at checkout.</p>
+            <p><a href='https://" . $_SERVER['HTTP_HOST'] . "/dashboard.php?page=user_credits' style='background: #ff4d00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;'>View My Credits</a></p>
+            <p>If you have any questions, please contact us.</p>
+            <p>Best regards,<br>Crash Hockey Team</p>
+        </body>
+        </html>
+        ";
+    } elseif ($method === 'exchange') {
+        $subject = 'Booking Exchange Completed - Crash Hockey';
+        $body = "
+        <html>
+        <body style='font-family: Arial, sans-serif; color: #333;'>
+            <h2 style='color: #ff4d00;'>Booking Exchange Completed</h2>
+            <p>Hi $name,</p>
+            <p>Your booking has been successfully exchanged.</p>
+            <div style='background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                <strong>Original Session:</strong> " . htmlspecialchars($session_name) . "<br>
+                " . ($exchange_session_name ? "<strong>New Session:</strong> " . htmlspecialchars($exchange_session_name) . "<br>" : "") . "
+                <strong>Reason:</strong> " . htmlspecialchars($reason) . "
+            </div>
+            <p>Your new booking is confirmed. You can view it in your dashboard.</p>
+            <p><a href='https://" . $_SERVER['HTTP_HOST'] . "/dashboard.php?page=session_history' style='background: #ff4d00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 10px;'>View My Bookings</a></p>
+            <p>If you have any questions, please contact us.</p>
+            <p>Best regards,<br>Crash Hockey Team</p>
+        </body>
+        </html>
+        ";
+    }
     
     try {
-        sendEmail($to_email, 'refund', [
+        sendEmail($to_email, strtolower(str_replace(' ', '_', $method)), [
             'name' => $name,
-            'amount' => number_format($amount, 2),
+            'amount' => number_format($refund_amount ?: $credit_amount, 2),
             'session' => $session_name,
             'reason' => $reason
         ]);

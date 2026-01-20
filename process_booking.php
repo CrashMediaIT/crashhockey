@@ -188,14 +188,119 @@ if (!empty($user_code)) {
 
 // Calculate tax and total (multiply by number of athletes)
 $num_athletes = count($athlete_ids);
+
+// CHECK FOR USER CREDITS AND APPLY THEM
+$credit_to_apply = 0;
+$apply_credits = isset($_POST['apply_credits']) && $_POST['apply_credits'] === '1';
+
+if ($apply_credits) {
+    // Get available user credits (store credits, not package credits)
+    $credits_stmt = $pdo->prepare("
+        SELECT id, remaining_amount
+        FROM user_credits
+        WHERE user_id = ? 
+        AND remaining_amount > 0 
+        AND (expiry_date IS NULL OR expiry_date >= CURDATE())
+        ORDER BY expiry_date ASC, created_at ASC
+    ");
+    $credits_stmt->execute([$user_id]);
+    $available_credits = $credits_stmt->fetchAll();
+    
+    if (!empty($available_credits)) {
+        $total_available = array_sum(array_column($available_credits, 'remaining_amount'));
+        
+        // Calculate how much credit to use (before tax)
+        $price_before_tax = $final_price * $num_athletes;
+        $credit_to_apply = min($total_available, $price_before_tax);
+        
+        // Adjust price after credit
+        $final_price_after_credit = max(0, $price_before_tax - $credit_to_apply);
+        $final_price = $final_price_after_credit / $num_athletes; // Per athlete price
+    }
+}
+
 $tax_amount = $final_price * ($tax_rate / 100);
 $total_per_athlete = $final_price + $tax_amount;
 $total_with_tax = $total_per_athlete * $num_athletes;
 
-// 6. CREATE STRIPE SESSION
+// If credits cover everything, skip Stripe
+if ($apply_credits && $total_with_tax <= 0.01) {
+    $pdo->beginTransaction();
+    
+    try {
+        // Deduct credits from user_credits table
+        $remaining_to_deduct = $credit_to_apply;
+        
+        foreach ($available_credits as $credit) {
+            if ($remaining_to_deduct <= 0) break;
+            
+            $deduct_amount = min($remaining_to_deduct, $credit['remaining_amount']);
+            
+            $update_credit = $pdo->prepare("
+                UPDATE user_credits 
+                SET used_amount = used_amount + ?, 
+                    remaining_amount = remaining_amount - ? 
+                WHERE id = ?
+            ");
+            $update_credit->execute([$deduct_amount, $deduct_amount, $credit['id']]);
+            
+            $remaining_to_deduct -= $deduct_amount;
+        }
+        
+        // Create paid bookings for each athlete
+        foreach ($athlete_ids as $athlete_id) {
+            $booking_stmt = $pdo->prepare("
+                INSERT INTO bookings (user_id, session_id, amount_paid, original_price, tax_amount, 
+                                    discount_code, credit_applied, booked_for_user_id, payment_type, status, created_at)
+                VALUES (?, ?, 0, ?, 0, ?, ?, ?, 'session', 'paid', NOW())
+            ");
+            
+            $booked_for = ($is_parent_booking) ? $athlete_id : null;
+            $credit_per_athlete = $credit_to_apply / $num_athletes;
+            
+            $booking_stmt->execute([
+                $user_id,
+                $session_id,
+                $original_price,
+                $applied_code,
+                $credit_per_athlete,
+                $booked_for
+            ]);
+            
+            // Send notification
+            createNotification(
+                $pdo,
+                $athlete_id,
+                'booking',
+                'Session Booked with Store Credit',
+                "Booked " . $session['title'] . " using store credit",
+                'dashboard.php?page=session_detail&id=' . $session_id,
+                true
+            );
+            
+            // Log security event
+            logSecurityEvent($pdo, 'booking_credit', "User $user_id booked session $session_id for athlete $athlete_id using $credit_per_athlete in credits", $user_id);
+        }
+        
+        $pdo->commit();
+        header("Location: dashboard.php?page=schedule&status=booked_with_credit");
+        exit();
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Credit booking error: " . $e->getMessage());
+        die("Error processing credit booking: " . $e->getMessage());
+    }
+}
+
+// 6. CREATE STRIPE SESSION (if payment is still needed)
 try {
     $description = $applied_code ? "Discount '$applied_code' applied" : 'Regular Rate';
     $description .= " + $tax_name ($tax_rate%)";
+    
+    if ($credit_to_apply > 0) {
+        $description .= " | Credit applied: $" . number_format($credit_to_apply, 2);
+    }
     
     if ($num_athletes > 1) {
         $description .= " | Booking for $num_athletes athletes";
@@ -223,11 +328,13 @@ try {
     // 7. SAVE PENDING BOOKINGS IN DB (one for each athlete)
     // Store metadata to connect all bookings from this transaction
     $stripe_session_id = $checkout_session->id;
+    $credit_per_athlete = $credit_to_apply / $num_athletes;
     
     foreach ($athlete_ids as $athlete_id) {
         $stmt = $pdo->prepare("
-            INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, tax_amount, discount_code, booked_for_user_id, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            INSERT INTO bookings (user_id, session_id, stripe_session_id, amount_paid, original_price, 
+                                tax_amount, discount_code, credit_applied, booked_for_user_id, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
         ");
         
         // user_id is who made the booking (parent or athlete themselves)
@@ -242,11 +349,33 @@ try {
             $original_price,
             $tax_amount,
             $applied_code,
+            $credit_per_athlete,
             $booked_for
         ]);
         
         // Log security event
         logSecurityEvent($pdo, 'booking_created', "User $user_id created pending booking for athlete $athlete_id, session $session_id", $user_id);
+    }
+    
+    // If credits were applied, deduct them now (before payment)
+    if ($credit_to_apply > 0) {
+        $remaining_to_deduct = $credit_to_apply;
+        
+        foreach ($available_credits as $credit) {
+            if ($remaining_to_deduct <= 0) break;
+            
+            $deduct_amount = min($remaining_to_deduct, $credit['remaining_amount']);
+            
+            $update_credit = $pdo->prepare("
+                UPDATE user_credits 
+                SET used_amount = used_amount + ?, 
+                    remaining_amount = remaining_amount - ? 
+                WHERE id = ?
+            ");
+            $update_credit->execute([$deduct_amount, $deduct_amount, $credit['id']]);
+            
+            $remaining_to_deduct -= $deduct_amount;
+        }
     }
 
     // Redirect user to Stripe
