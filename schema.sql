@@ -301,8 +301,11 @@ CREATE TABLE IF NOT EXISTS `refunds` (
   `booking_id` INT NOT NULL,
   `user_id` INT NOT NULL,
   `refunded_by` INT NOT NULL,
+  `refund_type` ENUM('refund', 'credit', 'exchange') DEFAULT 'refund',
   `original_amount` DECIMAL(10,2) NOT NULL,
   `refund_amount` DECIMAL(10,2) NOT NULL,
+  `credit_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `exchange_session_id` INT DEFAULT NULL,
   `refund_reason` TEXT DEFAULT NULL,
   `stripe_refund_id` VARCHAR(255) DEFAULT NULL,
   `status` ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
@@ -310,9 +313,30 @@ CREATE TABLE IF NOT EXISTS `refunds` (
   FOREIGN KEY (`booking_id`) REFERENCES `bookings`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`refunded_by`) REFERENCES `users`(`id`) ON DELETE RESTRICT,
+  FOREIGN KEY (`exchange_session_id`) REFERENCES `sessions`(`id`) ON DELETE SET NULL,
   INDEX `idx_booking` (`booking_id`),
   INDEX `idx_user` (`user_id`),
-  INDEX `idx_date` (`refund_date`)
+  INDEX `idx_date` (`refund_date`),
+  INDEX `idx_type` (`refund_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- User Credits (for credit-based refunds)
+CREATE TABLE IF NOT EXISTS `user_credits` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `credit_amount` DECIMAL(10,2) NOT NULL,
+  `credit_source` ENUM('refund', 'bonus', 'adjustment') DEFAULT 'refund',
+  `refund_id` INT DEFAULT NULL,
+  `expiry_date` DATE DEFAULT NULL,
+  `used_amount` DECIMAL(10,2) DEFAULT 0.00,
+  `remaining_amount` DECIMAL(10,2) NOT NULL,
+  `notes` TEXT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`refund_id`) REFERENCES `refunds`(`id`) ON DELETE SET NULL,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_expiry` (`expiry_date`),
+  INDEX `idx_remaining` (`remaining_amount`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Exercises
@@ -867,7 +891,9 @@ INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
 ('nextcloud_username', ''),
 ('nextcloud_password', ''),
 ('nextcloud_receipt_folder', '/receipts'),
+('nextcloud_scan_subfolders', '1'),
 ('google_maps_api_key', ''),
 ('mileage_rate_per_km', '0.68'),
 ('mileage_rate_per_mile', '1.09'),
-('receipt_scan_enabled', '0');
+('receipt_scan_enabled', '0'),
+('credit_expiry_days', '365');

@@ -70,11 +70,12 @@ try {
             $booking_id = intval($_POST['booking_id']);
             $refund_amount = floatval($_POST['refund_amount']);
             $reason = trim($_POST['reason']);
-            $refund_type = $_POST['refund_type']; // 'full' or 'partial'
+            $method = $_POST['method'] ?? 'refund'; // 'refund', 'credit', or 'exchange'
+            $exchange_session_id = isset($_POST['exchange_session_id']) ? intval($_POST['exchange_session_id']) : null;
             
             // Get booking details
             $booking_stmt = $pdo->prepare("
-                SELECT b.*, u.email, u.first_name, s.session_name
+                SELECT b.*, u.email, u.first_name, s.title as session_name
                 FROM bookings b
                 JOIN users u ON b.user_id = u.id
                 LEFT JOIN sessions s ON b.session_id = s.id
@@ -88,87 +89,152 @@ try {
             }
             
             if ($refund_amount > $booking['amount_paid']) {
-                throw new Exception('Refund amount cannot exceed paid amount');
+                throw new Exception('Amount cannot exceed paid amount');
             }
             
-            // Get Stripe settings
-            $stripe_stmt = $pdo->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('stripe_secret_key', 'stripe_mode')");
-            $stripe_settings = $stripe_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            $stripe_refund_id = null;
+            $credit_amount = 0;
             
-            $stripe_secret = $stripe_settings['stripe_secret_key'] ?? '';
-            
-            if (empty($stripe_secret)) {
-                throw new Exception('Stripe not configured');
-            }
-            
-            // Process Stripe refund
-            if (!empty($booking['stripe_payment_intent_id'])) {
-                $refund_result = processStripeRefund($booking['stripe_payment_intent_id'], $refund_amount, $stripe_secret);
+            // Handle different refund methods
+            if ($method === 'refund') {
+                // Standard Stripe refund
+                $stripe_stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'stripe_secret_key'");
+                $stripe_secret = $stripe_stmt->fetchColumn();
                 
-                if (!$refund_result['success']) {
-                    throw new Exception('Stripe refund failed: ' . $refund_result['message']);
+                if (empty($stripe_secret)) {
+                    throw new Exception('Stripe not configured');
                 }
                 
-                $stripe_refund_id = $refund_result['refund_id'];
-            } else {
-                $stripe_refund_id = null;
+                // Process Stripe refund
+                if (!empty($booking['stripe_session_id'])) {
+                    $refund_result = processStripeRefund($booking['stripe_session_id'], $refund_amount, $stripe_secret);
+                    
+                    if (!$refund_result['success']) {
+                        throw new Exception('Stripe refund failed: ' . $refund_result['message']);
+                    }
+                    
+                    $stripe_refund_id = $refund_result['refund_id'];
+                }
+                
+            } elseif ($method === 'credit') {
+                // Issue store credit instead of refund
+                $credit_amount = $refund_amount;
+                
+                // Get credit expiry setting
+                $expiry_stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'credit_expiry_days'");
+                $expiry_days = intval($expiry_stmt->fetchColumn() ?: 365);
+                $expiry_date = date('Y-m-d', strtotime("+$expiry_days days"));
+                
+                // Create user credit
+                $credit_stmt = $pdo->prepare("
+                    INSERT INTO user_credits (user_id, credit_amount, credit_source, remaining_amount, expiry_date, notes, created_at)
+                    VALUES (?, ?, 'refund', ?, ?, ?, NOW())
+                ");
+                $credit_stmt->execute([
+                    $booking['user_id'],
+                    $credit_amount,
+                    $credit_amount,
+                    $expiry_date,
+                    "Credit issued for booking #$booking_id: $reason"
+                ]);
+                
+            } elseif ($method === 'exchange') {
+                // Exchange for different session
+                if (empty($exchange_session_id)) {
+                    throw new Exception('Exchange session not specified');
+                }
+                
+                // Validate exchange session exists
+                $session_check = $pdo->prepare("SELECT title, price FROM sessions WHERE id = ?");
+                $session_check->execute([$exchange_session_id]);
+                $exchange_session = $session_check->fetch();
+                
+                if (!$exchange_session) {
+                    throw new Exception('Exchange session not found');
+                }
+                
+                // Create new booking for exchange session
+                $exchange_booking = $pdo->prepare("
+                    INSERT INTO bookings (user_id, session_id, amount_paid, original_price, tax_amount, status, booked_for_user_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, 'paid', ?, NOW())
+                ");
+                $exchange_booking->execute([
+                    $booking['user_id'],
+                    $exchange_session_id,
+                    0, // No new payment
+                    $exchange_session['price'],
+                    0,
+                    $booking['booked_for_user_id']
+                ]);
             }
             
             // Create refund record
             $stmt = $pdo->prepare("
-                INSERT INTO refunds (booking_id, user_id, original_amount, refund_amount, refund_reason, stripe_refund_id, refunded_by, refund_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO refunds (booking_id, user_id, refunded_by, refund_type, original_amount, refund_amount, credit_amount, exchange_session_id, refund_reason, stripe_refund_id, status, refund_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW())
             ");
             $stmt->execute([
                 $booking_id,
                 $booking['user_id'],
+                $user_id,
+                $method,
                 $booking['amount_paid'],
-                $refund_amount,
+                $method === 'refund' ? $refund_amount : 0,
+                $credit_amount,
+                $exchange_session_id,
                 $reason,
-                $stripe_refund_id,
-                $user_id
+                $stripe_refund_id
             ]);
             
             $refund_id = $pdo->lastInsertId();
             
             // Update booking status
-            if ($refund_type === 'full') {
-                $pdo->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?")->execute([$booking_id]);
-            } else {
-                // Keep as 'paid' for partial refunds
-                $pdo->prepare("UPDATE bookings SET status = 'paid' WHERE id = ?")->execute([$booking_id]);
+            $pdo->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?")->execute([$booking_id]);
+            
+            // Link refund to user credit if applicable
+            if ($method === 'credit') {
+                $pdo->prepare("UPDATE user_credits SET refund_id = ? WHERE user_id = ? AND refund_id IS NULL ORDER BY id DESC LIMIT 1")
+                    ->execute([$refund_id, $booking['user_id']]);
             }
             
-            // If package credit purchase, add credits back
-            if ($booking['booking_type'] === 'package' && $refund_type === 'full') {
-                $package_stmt = $pdo->prepare("SELECT credits_purchased FROM package_purchases WHERE booking_id = ?");
+            // If package credit purchase, handle appropriately
+            if ($booking['payment_type'] === 'package') {
+                $package_stmt = $pdo->prepare("SELECT * FROM user_package_credits WHERE booking_id = ?");
                 $package_stmt->execute([$booking_id]);
-                $package = $package_stmt->fetch();
+                $package_credit = $package_stmt->fetch();
                 
-                if ($package) {
-                    $pdo->prepare("
-                        UPDATE package_purchases 
-                        SET credits_purchased = credits_purchased - ?, status = 'refunded'
-                        WHERE booking_id = ?
-                    ")->execute([$package['credits_purchased'], $booking_id]);
+                if ($package_credit && $method === 'refund') {
+                    // Remove unused credits on full refund
+                    $pdo->prepare("DELETE FROM user_package_credits WHERE booking_id = ?")->execute([$booking_id]);
                 }
             }
             
-            // Send notification
+            // Send notification based on method
+            $notification_messages = [
+                'refund' => "Your refund of $" . number_format($refund_amount, 2) . " has been processed.",
+                'credit' => "You have been issued $" . number_format($credit_amount, 2) . " in store credit (expires " . date('M j, Y', strtotime($expiry_date)) . ").",
+                'exchange' => "Your booking has been exchanged for {$exchange_session['title']}."
+            ];
+            
             createNotification(
                 $pdo,
                 $booking['user_id'],
                 'refund',
-                'Refund Processed',
-                "Your refund of $" . number_format($refund_amount, 2) . " for {$booking['session_name']} has been processed.",
+                ucfirst($method) . ' Processed',
+                $notification_messages[$method] . " Reason: $reason",
                 "dashboard.php?page=payment_history",
                 false
             );
             
             // Send email
-            sendRefundEmail($booking['email'], $booking['first_name'], $refund_amount, $booking['session_name'], $reason);
+            sendRefundEmail($booking['email'], $booking['first_name'], $refund_amount, $credit_amount, $booking['session_name'], $reason, $method);
             
-            echo json_encode(['success' => true, 'message' => 'Refund processed successfully', 'refund_id' => $refund_id]);
+            echo json_encode([
+                'success' => true, 
+                'message' => ucfirst($method) . ' processed successfully', 
+                'refund_id' => $refund_id,
+                'method' => $method
+            ]);
             break;
             
         case 'list_refunds':

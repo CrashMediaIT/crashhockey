@@ -16,7 +16,7 @@ try {
     $settings = getNextcloudSettings($pdo);
     
     // Check if scanning is enabled
-    $enabled_stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'receipt_scanning_enabled'");
+    $enabled_stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'receipt_scan_enabled'");
     $enabled = $enabled_stmt->fetchColumn();
     
     if ($enabled !== '1') {
@@ -24,12 +24,23 @@ try {
         exit(0);
     }
     
+    // Check if subfolder scanning is enabled
+    $subfolder_stmt = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'nextcloud_scan_subfolders'");
+    $scan_subfolders = $subfolder_stmt->fetchColumn() === '1';
+    
     // Connect to Nextcloud
     $connection = connectNextcloud($settings);
     $folder = $settings['nextcloud_receipt_folder'] ?? '/receipts';
     
-    // List files in receipt folder
-    $files = listNextcloudFiles($connection, $folder);
+    // List files in receipt folder (recursive if enabled)
+    if ($scan_subfolders) {
+        $files = [];
+        $files = listNextcloudFilesRecursive($connection, $folder, $files);
+        echo $log_message . "Scanning recursively in $folder\n";
+    } else {
+        $files = listNextcloudFiles($connection, $folder);
+        echo $log_message . "Scanning $folder (non-recursive)\n";
+    }
     
     $new_count = 0;
     $processed_count = 0;

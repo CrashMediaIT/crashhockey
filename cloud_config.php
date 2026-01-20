@@ -140,6 +140,41 @@ function getFileHash($content) {
 }
 
 /**
+ * List files recursively in Nextcloud folder and subfolders
+ * Supports year/month organization like /receipts/2026/01/
+ */
+function listNextcloudFilesRecursive($connection, $folder, &$allFiles = []) {
+    $folder = '/' . trim($folder, '/');
+    
+    try {
+        $items = listNextcloudFiles($connection, $folder);
+        
+        foreach ($items as $item) {
+            // Check if it's a directory by checking if path ends with / or has no content type
+            $isDirectory = (substr($item['path'], -1) === '/' || 
+                           empty($item['type']) || 
+                           $item['type'] === 'httpd/unix-directory');
+            
+            if ($isDirectory) {
+                // Recursively scan subdirectory
+                listNextcloudFilesRecursive($connection, $item['path'], $allFiles);
+            } else {
+                // It's a file, add to results
+                // Only include image and PDF files
+                $ext = strtolower(pathinfo($item['filename'], PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'pdf'])) {
+                    $allFiles[] = $item;
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error scanning folder $folder: " . $e->getMessage());
+    }
+    
+    return $allFiles;
+}
+
+/**
  * Test Nextcloud connection
  */
 function testNextcloudConnection($settings) {
