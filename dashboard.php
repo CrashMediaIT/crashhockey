@@ -71,7 +71,10 @@ $allowed_pages = [
     'admin_eval_framework' => 'views/admin_eval_framework.php',
     'admin_team_coaches'  => 'views/admin_team_coaches.php',
     'admin_system_check'  => 'views/admin_system_check.php',
-    'admin_feature_import' => 'views/admin_feature_import.php'
+    'admin_feature_import' => 'views/admin_feature_import.php',
+    'admin_database_tools' => 'views/admin_database_tools.php',
+    'reports'             => 'views/reports.php',
+    'report_view'         => 'views/report_view.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
@@ -229,6 +232,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <span class="nav-label">Coach Management</span>
         <nav class="nav-menu">
             <a href="?page=athletes" class="nav-link <?= $page=='athletes'?'active':'' ?>"><i class="fa-solid fa-users-gear"></i> Manage Roster</a>
+            <a href="?page=reports" class="nav-link <?= $page=='reports'?'active':'' ?>"><i class="fa-solid fa-chart-bar"></i> Reports & Analytics</a>
             <a href="?page=library_workouts" class="nav-link <?= $page=='library_workouts'?'active':'' ?>"><i class="fa-solid fa-book"></i> Exercise Library</a>
             <a href="?page=library_nutrition" class="nav-link <?= $page=='library_nutrition'?'active':'' ?>"><i class="fa-solid fa-utensils"></i> Food Library</a>
             <a href="?page=session_templates" class="nav-link <?= $page=='session_templates'?'active':'' ?>"><i class="fa-solid fa-file-invoice"></i> Session Templates</a>
@@ -253,6 +257,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_team_coaches" class="nav-link <?= $page=='admin_team_coaches'?'active':'' ?>"><i class="fa-solid fa-user-tie"></i> Team Coaches</a>
             <a href="?page=admin_system_check" class="nav-link <?= $page=='admin_system_check'?'active':'' ?>"><i class="fa-solid fa-shield-alt"></i> System Validation</a>
             <a href="?page=admin_feature_import" class="nav-link <?= $page=='admin_feature_import'?'active':'' ?>"><i class="fa-solid fa-file-import"></i> Feature Import</a>
+            <a href="?page=admin_database_tools" class="nav-link <?= $page=='admin_database_tools'?'active':'' ?>"><i class="fa-solid fa-database"></i> Database Tools</a>
             <a href="?page=admin_settings" class="nav-link <?= $page=='admin_settings'?'active':'' ?>"><i class="fa-solid fa-cog"></i> System Settings</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
         </nav>
@@ -261,6 +266,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <div class="nav-group">
         <span class="nav-label">Accounting & Reports</span>
         <nav class="nav-menu">
+            <a href="?page=reports" class="nav-link <?= $page=='reports'?'active':'' ?>"><i class="fa-solid fa-chart-bar"></i> Reports & Analytics</a>
             <a href="?page=billing_dashboard" class="nav-link <?= $page=='billing_dashboard'?'active':'' ?>"><i class="fa-solid fa-chart-pie"></i> Billing Dashboard</a>
             <a href="?page=accounting" class="nav-link <?= $page=='accounting'?'active':'' ?>"><i class="fa-solid fa-chart-line"></i> Accounting</a>
             <a href="?page=reports_income" class="nav-link <?= $page=='reports_income'?'active':'' ?>"><i class="fa-solid fa-file-invoice-dollar"></i> Income Reports</a>

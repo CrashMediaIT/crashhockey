@@ -15,7 +15,7 @@ if ($user_role !== 'admin') {
 // Get all locations
 $locations = $pdo->query("
     SELECT l.*, 
-           (SELECT COUNT(*) FROM sessions WHERE arena = l.name) as session_count
+           (SELECT COUNT(*) FROM sessions WHERE location_id = l.id) as session_count
     FROM locations l
     ORDER BY l.city, l.name
 ")->fetchAll();
@@ -216,6 +216,7 @@ $locations = $pdo->query("
             <tr>
                 <th>Arena Name</th>
                 <th>City</th>
+                <th>Location</th>
                 <th>Sessions</th>
                 <th>Created</th>
                 <th>Actions</th>
@@ -224,12 +225,27 @@ $locations = $pdo->query("
         <tbody>
             <?php foreach ($locations as $location): ?>
                 <tr>
-                    <td style="font-weight: 600;"><?= htmlspecialchars($location['name']) ?></td>
+                    <td style="font-weight: 600;">
+                        <?= htmlspecialchars($location['name']) ?>
+                        <?php if ($location['image_url']): ?>
+                        <br><img src="<?= htmlspecialchars($location['image_url']) ?>" alt="Location" style="max-width: 100px; margin-top: 5px; border-radius: 4px;">
+                        <?php endif; ?>
+                    </td>
                     <td><?= htmlspecialchars($location['city']) ?></td>
+                    <td>
+                        <?php if ($location['google_place_id']): ?>
+                        <a href="https://www.google.com/maps/place/?q=place_id:<?= htmlspecialchars($location['google_place_id']) ?>" 
+                           target="_blank" style="color: var(--primary); text-decoration: none;">
+                            <i class="fas fa-map-marker-alt"></i> View on Map
+                        </a>
+                        <?php else: ?>
+                        <span style="color: #64748b;">Not mapped</span>
+                        <?php endif; ?>
+                    </td>
                     <td><?= $location['session_count'] ?> sessions</td>
                     <td><?= date('M d, Y', strtotime($location['created_at'])) ?></td>
                     <td>
-                        <a href="#" onclick="openEditModal(<?= $location['id'] ?>, '<?= htmlspecialchars($location['name'], ENT_QUOTES) ?>', '<?= htmlspecialchars($location['city'], ENT_QUOTES) ?>')" class="btn-edit">
+                        <a href="#" onclick="openEditModal(<?= $location['id'] ?>, '<?= htmlspecialchars($location['name'], ENT_QUOTES) ?>', '<?= htmlspecialchars($location['city'], ENT_QUOTES) ?>', '<?= htmlspecialchars($location['google_place_id'] ?? '', ENT_QUOTES) ?>', '<?= htmlspecialchars($location['image_url'] ?? '', ENT_QUOTES) ?>')" class="btn-edit">
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         <?php if ($location['session_count'] == 0): ?>
@@ -256,6 +272,14 @@ $locations = $pdo->query("
             <?= csrfTokenInput() ?>
             <input type="hidden" name="action" id="formAction" value="create_location">
             <input type="hidden" name="location_id" id="locationId">
+            <input type="hidden" name="google_place_id" id="googlePlaceId">
+            <input type="hidden" name="image_url" id="locationImageUrl">
+            
+            <div class="form-group">
+                <label class="form-label">Search Location (Google Places)</label>
+                <input type="text" id="placeSearch" class="form-input" placeholder="Search for a location...">
+                <div id="placeResults" style="display: none; background: #06080b; border: 1px solid #1e293b; border-radius: 6px; margin-top: 5px; max-height: 200px; overflow-y: auto;"></div>
+            </div>
             
             <div class="form-group">
                 <label class="form-label">Arena Name *</label>
@@ -267,6 +291,14 @@ $locations = $pdo->query("
                 <input type="text" name="city" id="locationCity" class="form-input" required>
             </div>
             
+            <div id="locationPreview" style="display: none; margin-bottom: 15px;">
+                <label class="form-label">Location Image</label>
+                <img id="previewImage" src="" alt="Location" style="max-width: 100%; border-radius: 6px; margin-top: 5px;">
+                <button type="button" onclick="clearImage()" style="margin-top: 5px; padding: 6px 12px; background: #ef4444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-times"></i> Remove Image
+                </button>
+            </div>
+            
             <button type="submit" class="btn-submit">
                 <i class="fas fa-save"></i> Save Location
             </button>
@@ -275,21 +307,147 @@ $locations = $pdo->query("
 </div>
 
 <script>
+// Google Places API Configuration
+const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY_HERE'; // Replace with actual API key
+let placesService = null;
+
+function initPlacesSearch() {
+    const searchInput = document.getElementById('placeSearch');
+    if (!searchInput) return;
+    
+    // Debounce search
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 3) {
+            document.getElementById('placeResults').style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => searchPlaces(query), 500);
+    });
+}
+
+function searchPlaces(query) {
+    // Using Google Places API (Text Search)
+    const request = {
+        query: query,
+        fields: ['place_id', 'name', 'formatted_address', 'photos', 'geometry']
+    };
+    
+    // For demonstration, using a simulated search
+    // In production, use actual Google Places API
+    const results = simulatePlacesSearch(query);
+    displayPlaceResults(results);
+}
+
+function simulatePlacesSearch(query) {
+    // This simulates API results - replace with actual API call
+    return [
+        {
+            place_id: 'ChIJ' + Math.random().toString(36).substr(2, 9),
+            name: query + ' Arena',
+            formatted_address: '123 Main St, City, State',
+            photos: [{
+                getUrl: () => 'https://via.placeholder.com/400x300?text=' + encodeURIComponent(query)
+            }]
+        }
+    ];
+}
+
+function displayPlaceResults(results) {
+    const resultsDiv = document.getElementById('placeResults');
+    
+    if (!results || results.length === 0) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+    
+    resultsDiv.innerHTML = '';
+    results.forEach(place => {
+        const div = document.createElement('div');
+        div.style.padding = '10px';
+        div.style.borderBottom = '1px solid #1e293b';
+        div.style.cursor = 'pointer';
+        div.style.transition = 'background 0.2s';
+        
+        div.onmouseover = () => div.style.background = 'rgba(112, 0, 164, 0.1)';
+        div.onmouseout = () => div.style.background = 'transparent';
+        
+        div.innerHTML = `
+            <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${place.name}</div>
+            <div style="font-size: 12px; color: #94a3b8;">${place.formatted_address || ''}</div>
+        `;
+        
+        div.onclick = () => selectPlace(place);
+        resultsDiv.appendChild(div);
+    });
+    
+    resultsDiv.style.display = 'block';
+}
+
+function selectPlace(place) {
+    document.getElementById('locationName').value = place.name;
+    
+    // Extract city from address
+    const addressParts = (place.formatted_address || '').split(',');
+    if (addressParts.length > 1) {
+        document.getElementById('locationCity').value = addressParts[1].trim();
+    }
+    
+    // Set Google Place ID
+    document.getElementById('googlePlaceId').value = place.place_id;
+    
+    // Set image URL if available
+    if (place.photos && place.photos.length > 0) {
+        const photoUrl = place.photos[0].getUrl ? place.photos[0].getUrl() : place.photos[0];
+        document.getElementById('locationImageUrl').value = photoUrl;
+        document.getElementById('previewImage').src = photoUrl;
+        document.getElementById('locationPreview').style.display = 'block';
+    }
+    
+    document.getElementById('placeResults').style.display = 'none';
+    document.getElementById('placeSearch').value = '';
+}
+
+function clearImage() {
+    document.getElementById('locationImageUrl').value = '';
+    document.getElementById('previewImage').src = '';
+    document.getElementById('locationPreview').style.display = 'none';
+}
+
 function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'Add Location';
     document.getElementById('formAction').value = 'create_location';
     document.getElementById('locationId').value = '';
     document.getElementById('locationName').value = '';
     document.getElementById('locationCity').value = '';
+    document.getElementById('googlePlaceId').value = '';
+    document.getElementById('locationImageUrl').value = '';
+    document.getElementById('placeSearch').value = '';
+    document.getElementById('locationPreview').style.display = 'none';
+    document.getElementById('placeResults').style.display = 'none';
     document.getElementById('locationModal').classList.add('active');
 }
 
-function openEditModal(id, name, city) {
+function openEditModal(id, name, city, placeId, imageUrl) {
     document.getElementById('modalTitle').textContent = 'Edit Location';
     document.getElementById('formAction').value = 'edit_location';
     document.getElementById('locationId').value = id;
     document.getElementById('locationName').value = name;
     document.getElementById('locationCity').value = city;
+    document.getElementById('googlePlaceId').value = placeId || '';
+    document.getElementById('locationImageUrl').value = imageUrl || '';
+    
+    if (imageUrl) {
+        document.getElementById('previewImage').src = imageUrl;
+        document.getElementById('locationPreview').style.display = 'block';
+    } else {
+        document.getElementById('locationPreview').style.display = 'none';
+    }
+    
     document.getElementById('locationModal').classList.add('active');
 }
 
@@ -317,3 +475,8 @@ document.getElementById('locationModal').addEventListener('click', function(e) {
     }
 });
 </script>
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initPlacesSearch();
+});
