@@ -13,7 +13,7 @@ $athletes = $athletes_stmt->fetchAll();
 
 // Get recent sessions for dropdown
 $sessions_stmt = $pdo->query("
-    SELECT s.id, s.session_name, s.session_date, s.session_time 
+    SELECT s.id, s.title as session_name, s.session_date, s.session_time 
     FROM sessions s 
     WHERE s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     ORDER BY s.session_date DESC, s.session_time DESC
