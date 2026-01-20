@@ -142,28 +142,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                         $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
                         $pdo->exec("SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO'");
                         
-                        // Split by semicolons and execute each statement
-                        $statements = preg_split('/;[\s]*$/m', $schema);
+                        // Remove comments first
+                        $schema = preg_replace('/^--.*$/m', '', $schema); // Remove single-line comments
+                        $schema = preg_replace('/\/\*.*?\*\//s', '', $schema); // Remove multi-line comments
+                        
+                        // Split by semicolons (handle both ; and ;\n)
+                        $statements = array_filter(array_map('trim', preg_split('/;[\s]*(\n|$)/', $schema)));
+                        
                         $failed_statements = [];
                         $successful_count = 0;
                         $total_statements = 0;
                         
+                        // Separate CREATE TABLE statements from others
+                        $create_statements = [];
+                        $other_statements = [];
+                        
                         foreach ($statements as $statement) {
-                            $statement = trim($statement);
-                            // Skip empty statements and comments
-                            if (empty($statement) || strpos($statement, '--') === 0 || strpos($statement, '/*') === 0) {
-                                continue;
-                            }
+                            if (empty($statement)) continue;
                             
                             $total_statements++;
                             
+                            if (stripos($statement, 'CREATE TABLE') !== false || 
+                                stripos($statement, 'CREATE INDEX') !== false ||
+                                stripos($statement, 'CREATE UNIQUE INDEX') !== false) {
+                                $create_statements[] = $statement;
+                            } else {
+                                $other_statements[] = $statement;
+                            }
+                        }
+                        
+                        // Execute CREATE TABLE statements first
+                        foreach ($create_statements as $statement) {
                             try {
                                 $pdo->exec($statement);
                                 $successful_count++;
                             } catch (PDOException $e) {
                                 $failed_statements[] = [
-                                    'statement' => substr($statement, 0, 150) . (strlen($statement) > 150 ? '...' : ''),
-                                    'error' => $e->getMessage()
+                                    'statement' => substr($statement, 0, 200) . (strlen($statement) > 200 ? '...' : ''),
+                                    'error' => $e->getMessage(),
+                                    'type' => 'CREATE'
+                                ];
+                            }
+                        }
+                        
+                        // Then execute INSERT/ALTER and other statements
+                        foreach ($other_statements as $statement) {
+                            try {
+                                $pdo->exec($statement);
+                                $successful_count++;
+                            } catch (PDOException $e) {
+                                // Don't fail on INSERT errors if table doesn't exist (means CREATE failed)
+                                $failed_statements[] = [
+                                    'statement' => substr($statement, 0, 200) . (strlen($statement) > 200 ? '...' : ''),
+                                    'error' => $e->getMessage(),
+                                    'type' => 'INSERT/ALTER'
                                 ];
                             }
                         }
@@ -778,6 +810,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     <div style="max-height: 200px; overflow-y: auto;">
                         <?php foreach ($stats['failed_statements'] as $fail): ?>
                             <div style="margin-bottom: 15px; padding: 10px; background: #1a0f0f; border-radius: 4px; border-left: 3px solid #ff4444;">
+                                <div style="font-size: 10px; color: #aaa; margin-bottom: 3px;"><strong>Type:</strong> <?= htmlspecialchars($fail['type'] ?? 'UNKNOWN') ?></div>
                                 <div style="font-size: 11px; font-family: monospace; color: #94a3b8; margin-bottom: 5px;"><?= htmlspecialchars($fail['statement']) ?></div>
                                 <div style="font-size: 11px; color: #ff8888;"><strong>Error:</strong> <?= htmlspecialchars($fail['error']) ?></div>
                             </div>
