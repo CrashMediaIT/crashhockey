@@ -185,9 +185,19 @@ function updateSetting($pdo, $key, $value) {
  * Encrypt password using AES-256-CBC
  */
 function encryptPassword($password) {
-    $key = hash('sha256', 'crashhockey_nextcloud_key', true);
-    $iv = openssl_random_pseudo_bytes(16);
-    $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
+    // Use a key from environment or generate a persistent one
+    $key_file = __DIR__ . '/.nextcloud_key';
+    if (!file_exists($key_file)) {
+        $key = bin2hex(openssl_random_bytes(32));
+        file_put_contents($key_file, $key);
+        chmod($key_file, 0600);
+    } else {
+        $key = file_get_contents($key_file);
+    }
+    
+    $key_hash = hash('sha256', $key, true);
+    $iv = openssl_random_bytes(16);
+    $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key_hash, 0, $iv);
     return base64_encode($iv . '::' . $encrypted);
 }
 
@@ -195,12 +205,18 @@ function encryptPassword($password) {
  * Decrypt password
  */
 function decryptPassword($encrypted_data) {
-    $key = hash('sha256', 'crashhockey_nextcloud_key', true);
+    $key_file = __DIR__ . '/.nextcloud_key';
+    if (!file_exists($key_file)) {
+        return '';
+    }
+    
+    $key = file_get_contents($key_file);
+    $key_hash = hash('sha256', $key, true);
     $parts = explode('::', base64_decode($encrypted_data), 2);
     if (count($parts) === 2) {
         $iv = $parts[0];
         $encrypted = $parts[1];
-        return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
+        return openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
     }
     return '';
 }

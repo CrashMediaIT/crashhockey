@@ -38,27 +38,31 @@ function sendApprovalNotification($pdo, $to_user_id, $type, $details) {
         // Create notification in database
         $notification_stmt = $pdo->prepare("
             INSERT INTO notifications 
-            (user_id, type, message, is_read, created_at)
-            VALUES (?, ?, ?, 0, NOW())
+            (user_id, type, title, message, read_status, created_at)
+            VALUES (?, ?, ?, ?, 0, NOW())
         ");
         
         $message = '';
+        $title = '';
         $step_title = htmlspecialchars($details['step_title'], ENT_QUOTES, 'UTF-8');
         $note = isset($details['note']) ? htmlspecialchars($details['note'], ENT_QUOTES, 'UTF-8') : '';
         
         switch ($type) {
             case 'approval_requested':
+                $title = 'Approval Request';
                 $message = "New approval request for: {$step_title}";
                 break;
             case 'approval_approved':
+                $title = 'Step Approved';
                 $message = "Your step '{$step_title}' has been approved!";
                 break;
             case 'approval_rejected':
+                $title = 'Step Not Approved';
                 $message = "Your step '{$step_title}' was not approved. " . $note;
                 break;
         }
         
-        $notification_stmt->execute([$to_user_id, $type, $message]);
+        $notification_stmt->execute([$to_user_id, $type, $title, $message]);
         
         // TODO: Send email using mailer.php if needed
         // require_once 'mailer.php';
