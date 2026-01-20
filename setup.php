@@ -131,70 +131,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 2) {
                 // Read and execute schema file
                 $schema_file = __DIR__ . '/deployment/schema.sql';
                 if (!file_exists($schema_file)) {
-                    $error = 'Schema file not found. Please ensure schema.sql exists.';
+                    $error = 'Schema file not found at: ' . $schema_file;
                 } else {
                     $schema = file_get_contents($schema_file);
                     
-                    // Disable foreign key checks temporarily to handle table creation order
-                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-                    
-                    // Split by semicolons and execute each statement
-                    $statements = array_filter(array_map('trim', explode(';', $schema)));
-                    $failed_statements = [];
-                    
-                    foreach ($statements as $statement) {
-                        if (!empty($statement) && strpos($statement, '--') !== 0) {
+                    if (empty($schema)) {
+                        $error = 'Schema file is empty.';
+                    } else {
+                        // Disable foreign key checks temporarily to handle table creation order
+                        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+                        $pdo->exec("SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO'");
+                        
+                        // Split by semicolons and execute each statement
+                        $statements = preg_split('/;[\s]*$/m', $schema);
+                        $failed_statements = [];
+                        $successful_count = 0;
+                        $total_statements = 0;
+                        
+                        foreach ($statements as $statement) {
+                            $statement = trim($statement);
+                            // Skip empty statements and comments
+                            if (empty($statement) || strpos($statement, '--') === 0 || strpos($statement, '/*') === 0) {
+                                continue;
+                            }
+                            
+                            $total_statements++;
+                            
                             try {
                                 $pdo->exec($statement);
+                                $successful_count++;
                             } catch (PDOException $e) {
-                                $failed_statements[] = ['statement' => substr($statement, 0, 100) . '...', 'error' => $e->getMessage()];
+                                $failed_statements[] = [
+                                    'statement' => substr($statement, 0, 150) . (strlen($statement) > 150 ? '...' : ''),
+                                    'error' => $e->getMessage()
+                                ];
                             }
                         }
-                    }
-                    
-                    // Re-enable foreign key checks
-                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-                    
-                    // SCHEMA VALIDATION: Test that critical tables exist
-                    $critical_tables = ['users', 'sessions', 'bookings', 'age_groups', 'skill_levels', 
-                                       'system_settings', 'practice_plans', 'packages'];
-                    $missing_tables = [];
-                    
-                    foreach ($critical_tables as $table) {
-                        $result = $pdo->query("SHOW TABLES LIKE '$table'");
-                        if ($result->rowCount() === 0) {
-                            $missing_tables[] = $table;
-                        }
-                    }
-                    
-                    // SCHEMA REPAIR: If tables are missing or statements failed, report them
-                    if (!empty($missing_tables) || !empty($failed_statements)) {
-                        $error = '<strong>Schema initialization completed with issues:</strong><br><br>';
                         
-                        if (!empty($missing_tables)) {
-                            $error .= '<strong>Missing Tables:</strong> ' . implode(', ', $missing_tables) . '<br><br>';
-                        }
+                        // Re-enable foreign key checks
+                        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                         
-                        if (!empty($failed_statements)) {
-                            $error .= '<strong>Failed Statements:</strong><br>';
-                            foreach ($failed_statements as $fail) {
-                                $error .= '• ' . htmlspecialchars($fail['statement']) . '<br>';
-                                $error .= '&nbsp;&nbsp;Error: ' . htmlspecialchars($fail['error']) . '<br>';
-                            }
-                            $error .= '<br>';
-                        }
+                        // Store results for validation page
+                        $_SESSION['schema_stats'] = [
+                            'total' => $total_statements,
+                            'successful' => $successful_count,
+                            'failed' => count($failed_statements),
+                            'failed_statements' => $failed_statements
+                        ];
                         
-                        $error .= '<em>Database partially initialized. You can try to proceed, but some features may not work correctly.</em>';
-                        // Still allow moving forward
-                        $step = 3;
-                    } else {
-                        // Schema validation passed - all tables created successfully
-                        $step = 3; // Move to SMTP configuration step
+                        // Move to validation page regardless of success/failure
+                        $step = 2.5; // New validation step
                     }
                 }
                 
             } catch (PDOException $e) {
-                $error = 'Database initialization failed: ' . $e->getMessage();
+                $error = '<strong>CRITICAL: Database connection or initialization failed</strong><br><br>';
+                $error .= 'Error: ' . htmlspecialchars($e->getMessage()) . '<br><br>';
+                $error .= 'Please check:<br>';
+                $error .= '• Database credentials are correct<br>';
+                $error .= '• Database server is running<br>';
+                $error .= '• User has permissions to create tables<br>';
             }
         }
     }
@@ -259,53 +255,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                     );
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     
-                    // Save SMTP settings to database
-                    $settings = [
-                        'smtp_host' => $smtp_host,
-                        'smtp_port' => $smtp_port,
-                        'smtp_encryption' => $smtp_encryption,
-                        'smtp_user' => $smtp_user,
-                        'smtp_pass' => $smtp_pass,
-                        'smtp_from_email' => $smtp_from_email,
-                        'smtp_from_name' => $smtp_from_name
-                    ];
-                    
-                    $del = $pdo->prepare("DELETE FROM system_settings WHERE setting_key = ?");
-                    $ins = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
-                    
-                    foreach ($settings as $key => $value) {
-                        $del->execute([$key]);
-                        $ins->execute([$key, $value]);
-                    }
-                    
-                    // Test SMTP by sending a test email
-                    require_once __DIR__ . '/mailer.php';
-                    
-                    // Temporarily override settings for testing
-                    $_ENV['SMTP_HOST'] = $smtp_host;
-                    $_ENV['SMTP_PORT'] = $smtp_port;
-                    $_ENV['SMTP_ENCRYPTION'] = $smtp_encryption;
-                    $_ENV['SMTP_USER'] = $smtp_user;
-                    $_ENV['SMTP_PASS'] = $smtp_pass;
-                    $_ENV['SMTP_FROM_EMAIL'] = $smtp_from_email;
-                    $_ENV['SMTP_FROM_NAME'] = $smtp_from_name;
-                    
-                    $test_result = sendEmail($test_email, 'test', []);
-                    
-                    if ($test_result) {
-                        $smtp_tested = true;
-                        $step = 4; // Move to admin creation
+                    // VERIFY SYSTEM_SETTINGS TABLE EXISTS
+                    $result = $pdo->query("SHOW TABLES LIKE 'system_settings'");
+                    if ($result->rowCount() === 0) {
+                        $error = '<strong>CRITICAL ERROR:</strong> system_settings table does not exist!<br><br>';
+                        $error .= 'The database initialization did not complete successfully. Please go back to Step 2 and retry database initialization.<br><br>';
+                        $error .= '<form method="POST" style="margin-top: 10px;"><input type="hidden" name="step" value="2"><button type="submit" class="btn" style="background: #7000a4;">← Back to Database Initialization</button></form>';
                     } else {
-                        // Fetch the actual error message from email_logs
-                        $stmt = $pdo->prepare("SELECT error_message FROM email_logs WHERE recipient = ? AND status = 'FAILED' ORDER BY sent_at DESC LIMIT 1");
-                        $stmt->execute([$test_email]);
-                        $email_error = $stmt->fetchColumn();
+                        // Save SMTP settings to database
+                        $settings = [
+                            'smtp_host' => $smtp_host,
+                            'smtp_port' => $smtp_port,
+                            'smtp_encryption' => $smtp_encryption,
+                            'smtp_user' => $smtp_user,
+                            'smtp_pass' => $smtp_pass,
+                            'smtp_from_email' => $smtp_from_email,
+                            'smtp_from_name' => $smtp_from_name
+                        ];
                         
-                        $error = 'SMTP test failed: ' . ($email_error ?: 'Please check your settings and try again.');
+                        $del = $pdo->prepare("DELETE FROM system_settings WHERE setting_key = ?");
+                        $ins = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+                        
+                        foreach ($settings as $key => $value) {
+                            $del->execute([$key]);
+                            $ins->execute([$key, $value]);
+                        }
+                        
+                        // Test SMTP by sending a test email
+                        require_once __DIR__ . '/mailer.php';
+                        
+                        // Temporarily override settings for testing
+                        $_ENV['SMTP_HOST'] = $smtp_host;
+                        $_ENV['SMTP_PORT'] = $smtp_port;
+                        $_ENV['SMTP_ENCRYPTION'] = $smtp_encryption;
+                        $_ENV['SMTP_USER'] = $smtp_user;
+                        $_ENV['SMTP_PASS'] = $smtp_pass;
+                        $_ENV['SMTP_FROM_EMAIL'] = $smtp_from_email;
+                        $_ENV['SMTP_FROM_NAME'] = $smtp_from_name;
+                        
+                        $test_result = sendEmail($test_email, 'test', []);
+                        
+                        if ($test_result) {
+                            $smtp_tested = true;
+                            $step = 4; // Move to admin creation
+                        } else {
+                            // Fetch the actual error message from email_logs
+                            $stmt = $pdo->prepare("SELECT error_message FROM email_logs WHERE recipient = ? AND status = 'FAILED' ORDER BY sent_at DESC LIMIT 1");
+                            $stmt->execute([$test_email]);
+                            $email_error = $stmt->fetchColumn();
+                            
+                            $error = 'SMTP test failed: ' . ($email_error ?: 'Please check your settings and try again.');
+                        }
                     }
                     
                 } catch (PDOException $e) {
-                    $error = 'Database error: ' . $e->getMessage();
+                    $error = '<strong>Database error:</strong> ' . htmlspecialchars($e->getMessage()) . '<br><br>';
+                    $error .= 'Please ensure the database was initialized correctly in Step 2.';
                 }
             } else {
                 $error = 'Invalid configuration file.';
@@ -375,19 +380,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     );
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     
-                    // Create admin account
-                    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-                    $stmt = $pdo->prepare("
-                        INSERT INTO users (first_name, last_name, email, password, role, is_verified, email_notifications)
-                        VALUES (?, ?, ?, ?, 'admin', 1, 1)
-                    ");
-                    $stmt->execute([$first_name, $last_name, $email, $hashed_password]);
-                    
-                    // Create lock file now
-                    file_put_contents($lock_file, date('Y-m-d H:i:s'));
-                    
-                    $admin_created = true;
-                    $success = true;
+                    // VERIFY USERS TABLE EXISTS
+                    $result = $pdo->query("SHOW TABLES LIKE 'users'");
+                    if ($result->rowCount() === 0) {
+                        $error = '<strong>CRITICAL ERROR:</strong> users table does not exist!<br><br>';
+                        $error .= 'The database initialization did not complete successfully. Please go back to Step 2 and retry database initialization.<br><br>';
+                        $error .= '<form method="POST" style="margin-top: 10px;"><input type="hidden" name="step" value="2"><button type="submit" class="btn" style="background: #7000a4;">← Back to Database Initialization</button></form>';
+                    } else {
+                        // Create admin account
+                        $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+                        $stmt = $pdo->prepare("
+                            INSERT INTO users (first_name, last_name, email, password, role, is_verified, email_notifications)
+                            VALUES (?, ?, ?, ?, 'admin', 1, 1)
+                        ");
+                        $stmt->execute([$first_name, $last_name, $email, $hashed_password]);
+                        
+                        // Create lock file now
+                        file_put_contents($lock_file, date('Y-m-d H:i:s'));
+                        
+                        $admin_created = true;
+                        $success = true;
+                    }
                     
                 } catch (PDOException $e) {
                     if ($e->getCode() == 23000) {
@@ -587,6 +600,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             <div class="step-indicator">
                 <div class="step <?= $step >= 1 ? 'active' : '' ?>">1</div>
                 <div class="step <?= $step >= 2 ? 'active' : '' ?>">2</div>
+                <div class="step <?= ($step >= 2.5 && $step < 3) ? 'active' : ($step >= 3 ? 'complete' : '') ?>"><i class="fas fa-check"></i></div>
                 <div class="step <?= $step >= 3 ? 'active' : '' ?>">3</div>
                 <div class="step <?= $step >= 4 ? 'active' : '' ?>">4</div>
             </div>
@@ -594,7 +608,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             <?php if ($error): ?>
                 <div class="alert alert-error">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <?= htmlspecialchars($error) ?>
+                    <?= $error ?>
                 </div>
             <?php endif; ?>
             
@@ -657,6 +671,146 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                         <i class="fas fa-database"></i> Initialize Database
                     </button>
                 </form>
+            <?php elseif ($step == 2.5): ?>
+                <?php
+                // VALIDATION PAGE: Check all tables
+                // Reconnect to database to verify tables
+                $env_data = file_get_contents($config_file);
+                preg_match('/DB_HOST=(.+)/', $env_data, $host_match);
+                preg_match('/DB_NAME=(.+)/', $env_data, $name_match);
+                preg_match('/DB_USER=(.+)/', $env_data, $user_match);
+                preg_match('/DB_PASS_ENCRYPTED=(.+)/', $env_data, $pass_match);
+                preg_match('/ENCRYPTION_KEY_HASH=(.+)/', $env_data, $key_match);
+                
+                $db_host = trim($host_match[1]);
+                $db_name = trim($name_match[1]);
+                $db_user = trim($user_match[1]);
+                
+                // Decrypt password
+                if ($pass_match && $key_match) {
+                    $encrypted_data = trim($pass_match[1]);
+                    $key_hash = hex2bin(trim($key_match[1]));
+                    $parts = explode('::', base64_decode($encrypted_data), 2);
+                    $iv = $parts[0];
+                    $encrypted = $parts[1];
+                    $db_pass = openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
+                }
+                
+                $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                // Define all critical tables that MUST exist
+                $all_tables = [
+                    'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
+                    'session_types', 'sessions', 'practice_plans', 'drill_categories', 'drills',
+                    'practice_plan_drills', 'bookings', 'athlete_sessions', 'team_sessions',
+                    'athlete_teams', 'teams', 'workout_templates', 'nutrition_templates',
+                    'athlete_notes', 'videos', 'video_notes', 'notifications', 'email_logs',
+                    'permissions', 'role_permissions', 'user_permissions', 'system_settings',
+                    'packages', 'user_credits', 'transactions', 'workout_plan_categories',
+                    'nutrition_plan_categories', 'practice_plan_categories', 'accounting_entries',
+                    'expense_categories', 'receipts', 'mileage_logs', 'refunds'
+                ];
+                
+                $existing_tables = [];
+                $missing_tables = [];
+                
+                foreach ($all_tables as $table) {
+                    $result = $pdo->query("SHOW TABLES LIKE '$table'");
+                    if ($result->rowCount() > 0) {
+                        $existing_tables[] = $table;
+                    } else {
+                        $missing_tables[] = $table;
+                    }
+                }
+                
+                $stats = $_SESSION['schema_stats'] ?? ['total' => 0, 'successful' => 0, 'failed' => 0, 'failed_statements' => []];
+                $has_critical_failures = count($missing_tables) > 0;
+                ?>
+                
+                <h2><i class="fas fa-clipboard-check"></i> Database Validation</h2>
+                
+                <div style="background: #0a0f14; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="font-size: 14px; color: #94a3b8; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">
+                        Initialization Summary
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div style="text-align: center; padding: 15px; background: #06080b; border-radius: 6px;">
+                            <div style="font-size: 28px; font-weight: 700; color: #64748b;"><?= $stats['total'] ?></div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">TOTAL STATEMENTS</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #06080b; border-radius: 6px;">
+                            <div style="font-size: 28px; font-weight: 700; color: #00ff88;"><?= $stats['successful'] ?></div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">SUCCESSFUL</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #06080b; border-radius: 6px;">
+                            <div style="font-size: 28px; font-weight: 700; color: #ff4444;"><?= $stats['failed'] ?></div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 5px;">FAILED</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background: #0a0f14; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="font-size: 14px; color: #94a3b8; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">
+                        Table Validation (<?= count($existing_tables) ?>/<?= count($all_tables) ?>)
+                    </h3>
+                    
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <?php foreach ($all_tables as $table): ?>
+                            <?php $exists = in_array($table, $existing_tables); ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 4px; background: #06080b; border-radius: 4px; border-left: 3px solid <?= $exists ? '#00ff88' : '#ff4444' ?>;">
+                                <span style="font-size: 13px; font-family: monospace; color: <?= $exists ? '#fff' : '#ff8888' ?>;"><?= $table ?></span>
+                                <?php if ($exists): ?>
+                                    <i class="fas fa-check-circle" style="color: #00ff88;"></i>
+                                <?php else: ?>
+                                    <i class="fas fa-times-circle" style="color: #ff4444;"></i>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
+                <?php if (!empty($stats['failed_statements'])): ?>
+                <div style="background: #2d1a1a; border: 1px solid #5a2828; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="font-size: 14px; color: #ff8888; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">
+                        <i class="fas fa-exclamation-triangle"></i> Failed SQL Statements
+                    </h3>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        <?php foreach ($stats['failed_statements'] as $fail): ?>
+                            <div style="margin-bottom: 15px; padding: 10px; background: #1a0f0f; border-radius: 4px; border-left: 3px solid #ff4444;">
+                                <div style="font-size: 11px; font-family: monospace; color: #94a3b8; margin-bottom: 5px;"><?= htmlspecialchars($fail['statement']) ?></div>
+                                <div style="font-size: 11px; color: #ff8888;"><strong>Error:</strong> <?= htmlspecialchars($fail['error']) ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($has_critical_failures): ?>
+                    <div class="alert alert-error" style="margin-bottom: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>CRITICAL:</strong> <?= count($missing_tables) ?> required table(s) are missing. You cannot proceed until all tables are created successfully. Please check the error messages above and fix any database issues.
+                    </div>
+                    
+                    <form method="POST">
+                        <input type="hidden" name="step" value="2">
+                        <button type="submit" class="btn" style="background: #7000a4;">
+                            <i class="fas fa-redo"></i> Retry Database Initialization
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <div class="alert alert-success" style="margin-bottom: 20px;">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>SUCCESS:</strong> All required database tables have been created successfully! You can now proceed to SMTP configuration.
+                    </div>
+                    
+                    <form method="POST">
+                        <input type="hidden" name="step" value="3">
+                        <button type="submit" class="btn">
+                            <i class="fas fa-arrow-right"></i> Continue to SMTP Configuration
+                        </button>
+                    </form>
+                <?php endif; ?>
             <?php elseif ($step == 3): ?>
                 <h2>SMTP Configuration</h2>
                 <p style="color: #94a3b8; margin-bottom: 20px; line-height: 1.6;">
