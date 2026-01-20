@@ -12,41 +12,131 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
     die(json_encode(['success' => false, 'message' => 'Access denied']));
 }
 
-header('Content-Type: application/json');
-
 $action = $_POST['action'] ?? '';
+
+// Determine if we should return JSON or redirect
+$json_actions = ['test_nextcloud', 'test_smtp'];
+$is_json = in_array($action, $json_actions);
+
+if ($is_json) {
+    header('Content-Type: application/json');
+}
 
 try {
     checkCsrfToken();
     
     switch ($action) {
+        case 'update_general':
+            $site_name = trim($_POST['site_name']);
+            $timezone = trim($_POST['timezone']);
+            $language = trim($_POST['language']);
+            
+            updateSetting($pdo, 'site_name', $site_name);
+            updateSetting($pdo, 'timezone', $timezone);
+            updateSetting($pdo, 'language', $language);
+            
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
+            
+        case 'update_smtp':
+            $smtp_host = trim($_POST['smtp_host']);
+            $smtp_port = trim($_POST['smtp_port']);
+            $smtp_encryption = trim($_POST['smtp_encryption']);
+            $smtp_user = trim($_POST['smtp_user']);
+            $smtp_pass = trim($_POST['smtp_pass']);
+            $smtp_from_email = trim($_POST['smtp_from_email']);
+            $smtp_from_name = trim($_POST['smtp_from_name']);
+            
+            updateSetting($pdo, 'smtp_host', $smtp_host);
+            updateSetting($pdo, 'smtp_port', $smtp_port);
+            updateSetting($pdo, 'smtp_encryption', $smtp_encryption);
+            updateSetting($pdo, 'smtp_user', $smtp_user);
+            if (!empty($smtp_pass)) {
+                updateSetting($pdo, 'smtp_pass', $smtp_pass);
+            }
+            updateSetting($pdo, 'smtp_from_email', $smtp_from_email);
+            updateSetting($pdo, 'smtp_from_name', $smtp_from_name);
+            
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
+            
+        case 'test_smtp':
+            $test_email = trim($_POST['test_email']);
+            require_once __DIR__ . '/mailer.php';
+            
+            $result = sendEmail($test_email, 'test', []);
+            if ($result) {
+                echo json_encode(['success' => true, 'message' => 'Test email sent successfully']);
+            } else {
+                $stmt = $pdo->prepare("SELECT error_message FROM email_logs WHERE recipient = ? AND status = 'FAILED' ORDER BY sent_at DESC LIMIT 1");
+                $stmt->execute([$test_email]);
+                $error = $stmt->fetchColumn();
+                echo json_encode(['success' => false, 'message' => $error ?: 'Failed to send test email']);
+            }
+            exit;
+            
         case 'update_nextcloud':
             $url = trim($_POST['nextcloud_url']);
             $username = trim($_POST['nextcloud_username']);
             $password = trim($_POST['nextcloud_password']);
             $folder = trim($_POST['nextcloud_receipt_folder']);
-            $enabled = isset($_POST['receipt_scanning_enabled']) ? '1' : '0';
+            $webdav_path = trim($_POST['nextcloud_webdav_path']);
+            $ocr_enabled = isset($_POST['nextcloud_ocr_enabled']) ? '1' : '0';
             
             updateSetting($pdo, 'nextcloud_url', $url);
             updateSetting($pdo, 'nextcloud_username', $username);
-            updateSetting($pdo, 'nextcloud_password', $password);
+            if (!empty($password)) {
+                // Encrypt password before storing
+                $encrypted_password = encryptPassword($password);
+                updateSetting($pdo, 'nextcloud_password', $encrypted_password);
+            }
             updateSetting($pdo, 'nextcloud_receipt_folder', $folder);
-            updateSetting($pdo, 'receipt_scanning_enabled', $enabled);
+            updateSetting($pdo, 'nextcloud_webdav_path', $webdav_path);
+            updateSetting($pdo, 'nextcloud_ocr_enabled', $ocr_enabled);
             
-            echo json_encode(['success' => true, 'message' => 'Nextcloud settings updated']);
-            break;
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
             
         case 'test_nextcloud':
             $settings = [
                 'nextcloud_url' => trim($_POST['nextcloud_url']),
                 'nextcloud_username' => trim($_POST['nextcloud_username']),
                 'nextcloud_password' => trim($_POST['nextcloud_password']),
-                'nextcloud_receipt_folder' => trim($_POST['nextcloud_receipt_folder'])
+                'nextcloud_receipt_folder' => trim($_POST['nextcloud_receipt_folder']),
+                'nextcloud_webdav_path' => trim($_POST['nextcloud_webdav_path'])
             ];
             
             $result = testNextcloudConnection($settings);
             echo json_encode($result);
-            break;
+            exit;
+            
+        case 'update_payments':
+            $tax_name = trim($_POST['tax_name']);
+            $tax_rate = floatval($_POST['tax_rate']);
+            
+            updateSetting($pdo, 'tax_name', $tax_name);
+            updateSetting($pdo, 'tax_rate', $tax_rate);
+            
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
+            
+        case 'update_security':
+            $session_timeout = intval($_POST['session_timeout_minutes']);
+            
+            updateSetting($pdo, 'session_timeout_minutes', $session_timeout);
+            
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
+            
+        case 'update_advanced':
+            $maintenance_mode = isset($_POST['maintenance_mode']) ? '1' : '0';
+            $debug_mode = isset($_POST['debug_mode']) ? '1' : '0';
+            
+            updateSetting($pdo, 'maintenance_mode', $maintenance_mode);
+            updateSetting($pdo, 'debug_mode', $debug_mode);
+            
+            header('Location: dashboard.php?page=admin_settings&success=1');
+            exit;
             
         case 'update_google_maps':
             $api_key = trim($_POST['google_maps_api_key']);
@@ -70,8 +160,13 @@ try {
     }
     
 } catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    if ($is_json) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    } else {
+        header('Location: dashboard.php?page=admin_settings&error=' . urlencode($e->getMessage()));
+        exit;
+    }
 }
 
 /**
@@ -84,5 +179,29 @@ function updateSetting($pdo, $key, $value) {
         ON DUPLICATE KEY UPDATE setting_value = ?
     ");
     $stmt->execute([$key, $value, $value]);
+}
+
+/**
+ * Encrypt password using AES-256-CBC
+ */
+function encryptPassword($password) {
+    $key = hash('sha256', 'crashhockey_nextcloud_key', true);
+    $iv = openssl_random_pseudo_bytes(16);
+    $encrypted = openssl_encrypt($password, 'AES-256-CBC', $key, 0, $iv);
+    return base64_encode($iv . '::' . $encrypted);
+}
+
+/**
+ * Decrypt password
+ */
+function decryptPassword($encrypted_data) {
+    $key = hash('sha256', 'crashhockey_nextcloud_key', true);
+    $parts = explode('::', base64_decode($encrypted_data), 2);
+    if (count($parts) === 2) {
+        $iv = $parts[0];
+        $encrypted = $parts[1];
+        return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
+    }
+    return '';
 }
 ?>

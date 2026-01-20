@@ -554,6 +554,255 @@ CREATE TABLE IF NOT EXISTS `testing_results` (
   INDEX `idx_user_date` (`user_id`, `test_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =========================================================
+-- GOALS AND PROGRESS TRACKING SYSTEM
+-- =========================================================
+
+-- Goals Table
+CREATE TABLE IF NOT EXISTS `goals` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `athlete_id` INT NOT NULL,
+  `created_by` INT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `category` VARCHAR(100) DEFAULT NULL,
+  `tags` VARCHAR(255) DEFAULT NULL,
+  `target_date` DATE DEFAULT NULL,
+  `status` ENUM('active', 'completed', 'archived') DEFAULT 'active',
+  `completion_percentage` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `completed_at` TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (`athlete_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_athlete` (`athlete_id`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_category` (`category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal Steps
+CREATE TABLE IF NOT EXISTS `goal_steps` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_id` INT NOT NULL,
+  `step_order` INT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `is_completed` TINYINT(1) DEFAULT 0,
+  `completed_at` TIMESTAMP NULL DEFAULT NULL,
+  `completed_by` INT DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_id`) REFERENCES `goals`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`completed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_goal` (`goal_id`),
+  INDEX `idx_order` (`step_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal Progress Logs
+CREATE TABLE IF NOT EXISTS `goal_progress` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `progress_note` TEXT,
+  `progress_percentage` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_id`) REFERENCES `goals`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_goal` (`goal_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal History (Archive)
+CREATE TABLE IF NOT EXISTS `goal_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_id` INT NOT NULL,
+  `action` ENUM('created', 'updated', 'completed', 'archived', 'step_completed') NOT NULL,
+  `user_id` INT NOT NULL,
+  `changes` TEXT,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_id`) REFERENCES `goals`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_goal` (`goal_id`),
+  INDEX `idx_action` (`action`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- EVALUATION PLATFORM - TYPE 1 (GOAL-BASED INTERACTIVE)
+-- =========================================================
+
+-- Goal-Based Evaluations
+CREATE TABLE IF NOT EXISTS `goal_evaluations` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `athlete_id` INT NOT NULL,
+  `created_by` INT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `share_token` VARCHAR(32) UNIQUE DEFAULT NULL,
+  `is_public` TINYINT(1) DEFAULT 0,
+  `status` ENUM('active', 'completed', 'archived') DEFAULT 'active',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`athlete_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_athlete` (`athlete_id`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_share_token` (`share_token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal Evaluation Steps
+CREATE TABLE IF NOT EXISTS `goal_eval_steps` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_eval_id` INT NOT NULL,
+  `step_order` INT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `is_completed` TINYINT(1) DEFAULT 0,
+  `completed_at` TIMESTAMP NULL DEFAULT NULL,
+  `completed_by` INT DEFAULT NULL,
+  `needs_approval` TINYINT(1) DEFAULT 0,
+  `is_approved` TINYINT(1) DEFAULT 0,
+  `approved_by` INT DEFAULT NULL,
+  `approved_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_eval_id`) REFERENCES `goal_evaluations`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`completed_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_goal_eval` (`goal_eval_id`),
+  INDEX `idx_order` (`step_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal Evaluation Progress
+CREATE TABLE IF NOT EXISTS `goal_eval_progress` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_eval_step_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `progress_note` TEXT,
+  `media_url` VARCHAR(500) DEFAULT NULL,
+  `media_type` ENUM('image', 'video') DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_eval_step_id`) REFERENCES `goal_eval_steps`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_step` (`goal_eval_step_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goal Evaluation Approvals
+CREATE TABLE IF NOT EXISTS `goal_eval_approvals` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `goal_eval_step_id` INT NOT NULL,
+  `requested_by` INT NOT NULL,
+  `approved_by` INT DEFAULT NULL,
+  `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `approval_note` TEXT,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`goal_eval_step_id`) REFERENCES `goal_eval_steps`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`requested_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`approved_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_step` (`goal_eval_step_id`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- EVALUATION PLATFORM - TYPE 2 (SKILLS & ABILITIES)
+-- =========================================================
+
+-- Evaluation Categories (Admin-defined)
+CREATE TABLE IF NOT EXISTS `eval_categories` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `display_order` INT DEFAULT 0,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_order` (`display_order`),
+  INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Evaluation Skills (Admin-defined)
+CREATE TABLE IF NOT EXISTS `eval_skills` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `category_id` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `criteria` TEXT,
+  `display_order` INT DEFAULT 0,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`category_id`) REFERENCES `eval_categories`(`id`) ON DELETE CASCADE,
+  INDEX `idx_category` (`category_id`),
+  INDEX `idx_order` (`display_order`),
+  INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Athlete Evaluations
+CREATE TABLE IF NOT EXISTS `athlete_evaluations` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `athlete_id` INT NOT NULL,
+  `created_by` INT NOT NULL,
+  `evaluation_date` DATE NOT NULL,
+  `title` VARCHAR(255) DEFAULT NULL,
+  `share_token` VARCHAR(32) UNIQUE DEFAULT NULL,
+  `is_public` TINYINT(1) DEFAULT 0,
+  `status` ENUM('draft', 'completed', 'archived') DEFAULT 'draft',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`athlete_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_athlete` (`athlete_id`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_share_token` (`share_token`),
+  INDEX `idx_eval_date` (`evaluation_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Team Evaluations
+CREATE TABLE IF NOT EXISTS `team_evaluations` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `team_id` INT DEFAULT NULL,
+  `created_by` INT NOT NULL,
+  `evaluation_date` DATE NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `status` ENUM('draft', 'completed', 'archived') DEFAULT 'draft',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`team_id`) REFERENCES `athlete_teams`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_team` (`team_id`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Evaluation Scores
+CREATE TABLE IF NOT EXISTS `evaluation_scores` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `evaluation_id` INT NOT NULL,
+  `skill_id` INT NOT NULL,
+  `score` INT DEFAULT NULL CHECK (score >= 1 AND score <= 10),
+  `public_notes` TEXT,
+  `private_notes` TEXT,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`evaluation_id`) REFERENCES `athlete_evaluations`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`skill_id`) REFERENCES `eval_skills`(`id`) ON DELETE CASCADE,
+  INDEX `idx_evaluation` (`evaluation_id`),
+  INDEX `idx_skill` (`skill_id`),
+  UNIQUE KEY `unique_eval_skill` (`evaluation_id`, `skill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Evaluation Media
+CREATE TABLE IF NOT EXISTS `evaluation_media` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `evaluation_id` INT DEFAULT NULL,
+  `score_id` INT DEFAULT NULL,
+  `media_url` VARCHAR(500) NOT NULL,
+  `media_type` ENUM('image', 'video') NOT NULL,
+  `caption` TEXT,
+  `uploaded_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`evaluation_id`) REFERENCES `athlete_evaluations`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`score_id`) REFERENCES `evaluation_scores`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`uploaded_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_evaluation` (`evaluation_id`),
+  INDEX `idx_score` (`score_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Athlete Notes
 CREATE TABLE IF NOT EXISTS `athlete_notes` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -942,11 +1191,19 @@ INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
 ('nextcloud_password', ''),
 ('nextcloud_receipt_folder', '/receipts'),
 ('nextcloud_scan_subfolders', '1'),
+('nextcloud_webdav_path', '/remote.php/dav/files/'),
+('nextcloud_ocr_enabled', '0'),
 ('google_maps_api_key', ''),
 ('mileage_rate_per_km', '0.68'),
 ('mileage_rate_per_mile', '1.09'),
 ('receipt_scan_enabled', '0'),
-('credit_expiry_days', '365');
+('credit_expiry_days', '365'),
+('site_name', 'Crash Hockey'),
+('timezone', 'America/Toronto'),
+('language', 'en'),
+('session_timeout_minutes', '60'),
+('maintenance_mode', '0'),
+('debug_mode', '0');
 
 -- =========================================================
 -- DEFAULT PLAN CATEGORIES

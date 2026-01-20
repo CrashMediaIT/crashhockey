@@ -769,7 +769,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Define ALL tables from schema.sql that MUST exist (53 total)
+                // Define ALL tables from schema.sql that MUST exist (69 total including new features)
                 $all_tables = [
                     // Core tables
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
@@ -797,7 +797,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     'permissions', 'role_permissions', 'user_permissions',
                     // Accounting tables
                     'expenses', 'expense_categories', 'expense_line_items', 'cloud_receipts', 
-                    'mileage_logs', 'mileage_stops', 'refunds'
+                    'mileage_logs', 'mileage_stops', 'refunds',
+                    // Goals and Progress Tracking
+                    'goals', 'goal_steps', 'goal_progress', 'goal_history',
+                    // Evaluation Platform - Goal-Based
+                    'goal_evaluations', 'goal_eval_steps', 'goal_eval_progress', 'goal_eval_approvals',
+                    // Evaluation Platform - Skills & Abilities
+                    'eval_categories', 'eval_skills', 'athlete_evaluations', 'team_evaluations',
+                    'evaluation_scores', 'evaluation_media'
                 ];
                 
                 $existing_tables = [];
