@@ -25,7 +25,7 @@ function getCategoryCount($pdo, $table, $column, $category_id) {
     <link rel="stylesheet" href="../style.css">
     <style>
         :root {
-            --primary: #ff4d00;
+            --primary: #7000a4;
             --primary-dark: #cc3d00;
             --background: #f5f5f5;
         }

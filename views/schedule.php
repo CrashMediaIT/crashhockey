@@ -85,7 +85,7 @@ $available_credits = floatval($user_credits_stmt->fetchColumn());
 
 <style>
     :root {
-        --primary: #ff4d00;
+        --primary: #7000a4;
     }
     .page-header {
         margin-bottom: 30px;

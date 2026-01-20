@@ -30,7 +30,7 @@
         }
         
         .sessions-header .highlight {
-            color: var(--primary, #ff4d00);
+            color: var(--primary, #7000a4);
         }
         
         .sessions-header p {
@@ -92,14 +92,14 @@
         }
         
         .session-card:hover {
-            border-color: var(--primary, #ff4d00);
+            border-color: var(--primary, #7000a4);
             transform: translateY(-3px);
             box-shadow: 0 10px 30px rgba(255, 77, 0, 0.2);
         }
         
         .session-type-badge {
             display: inline-block;
-            background: var(--primary, #ff4d00);
+            background: var(--primary, #7000a4);
             color: white;
             padding: 5px 12px;
             border-radius: 20px;
@@ -124,7 +124,7 @@
         }
         
         .session-detail i {
-            color: var(--primary, #ff4d00);
+            color: var(--primary, #7000a4);
             width: 20px;
         }
         
@@ -147,7 +147,7 @@
         .session-price {
             font-size: 1.8rem;
             font-weight: 700;
-            color: var(--primary, #ff4d00);
+            color: var(--primary, #7000a4);
             margin: 15px 0;
         }
         
@@ -170,7 +170,7 @@
         .register-btn {
             width: 100%;
             padding: 12px;
-            background: var(--primary, #ff4d00);
+            background: var(--primary, #7000a4);
             color: white;
             border: none;
             border-radius: 8px;
@@ -196,7 +196,7 @@
         
         .no-sessions i {
             font-size: 4rem;
-            color: var(--primary, #ff4d00);
+            color: var(--primary, #7000a4);
             margin-bottom: 20px;
         }
         

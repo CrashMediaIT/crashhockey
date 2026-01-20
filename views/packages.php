@@ -202,12 +202,12 @@ $tax_name = $settings['tax_name'] ?? 'HST';
     background: white;
     padding: 15px;
     border-radius: 8px;
-    border-left: 4px solid var(--primary, #ff4d00);
+    border-left: 4px solid var(--primary, #7000a4);
 }
 
 .credit-balance {
     font-size: 24px;
-    color: var(--primary, #ff4d00);
+    color: var(--primary, #7000a4);
     margin: 10px 0;
 }
 
@@ -232,9 +232,9 @@ $tax_name = $settings['tax_name'] ?? 'HST';
 }
 
 .filter-btn.active, .filter-btn:hover {
-    background: var(--primary, #ff4d00);
+    background: var(--primary, #7000a4);
     color: white;
-    border-color: var(--primary, #ff4d00);
+    border-color: var(--primary, #7000a4);
 }
 
 .packages-grid {
@@ -299,7 +299,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
 }
 
 .detail-item i {
-    color: var(--primary, #ff4d00);
+    color: var(--primary, #7000a4);
     width: 20px;
 }
 
@@ -325,7 +325,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
 .price-total {
     font-size: 20px;
     font-weight: bold;
-    color: var(--primary, #ff4d00);
+    color: var(--primary, #7000a4);
     margin-top: 5px;
 }
 
@@ -354,7 +354,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
 .btn-purchase {
     width: 100%;
     padding: 12px;
-    background: var(--primary, #ff4d00);
+    background: var(--primary, #7000a4);
     color: white;
     border: none;
     border-radius: 5px;
@@ -371,7 +371,7 @@ $tax_name = $settings['tax_name'] ?? 'HST';
     display: block;
     text-align: center;
     margin-top: 10px;
-    color: var(--primary, #ff4d00);
+    color: var(--primary, #7000a4);
     text-decoration: none;
 }
 

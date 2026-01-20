@@ -76,7 +76,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ff4d00; --bg: #06080b; --sidebar: #020305; --border: #1e293b; --text: #94a3b8; }
+        :root { --primary: #7000a4; --bg: #06080b; --sidebar: #020305; --border: #1e293b; --text: #94a3b8; }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: #fff; display: flex; height: 100vh; overflow: hidden; }
         .sidebar { width: 280px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px; overflow-y: auto; }

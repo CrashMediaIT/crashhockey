@@ -388,7 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             letter-spacing: -1px;
         }
         .logo span {
-            color: #ff4d00;
+            color: #7000a4;
         }
         .step-indicator {
             display: flex;
@@ -408,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             font-size: 14px;
         }
         .step.active {
-            background: #ff4d00;
+            background: #7000a4;
             color: #000;
         }
         .step.complete {
@@ -445,7 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
         }
         input:focus {
             outline: none;
-            border-color: #ff4d00;
+            border-color: #7000a4;
             box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.1);
         }
         .help-text {
@@ -456,7 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
         .btn {
             width: 100%;
             padding: 14px;
-            background: #ff4d00;
+            background: #7000a4;
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -510,7 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
         .success-card a {
             display: inline-block;
             padding: 14px 30px;
-            background: #ff4d00;
+            background: #7000a4;
             color: #fff;
             text-decoration: none;
             border-radius: 6px;

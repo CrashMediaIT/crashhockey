@@ -304,7 +304,7 @@ $recent_expense_list = $recent_expenses->fetchAll(PDO::FETCH_ASSOC);
     justify-content: center;
     font-size: 24px;
     background: rgba(255, 77, 0, 0.1);
-    color: var(--primary, #ff4d00);
+    color: var(--primary, #7000a4);
 }
 
 .card-content {
@@ -358,9 +358,9 @@ $recent_expense_list = $recent_expenses->fetchAll(PDO::FETCH_ASSOC);
 }
 
 .action-btn:hover {
-    background: var(--primary, #ff4d00);
+    background: var(--primary, #7000a4);
     color: white;
-    border-color: var(--primary, #ff4d00);
+    border-color: var(--primary, #7000a4);
 }
 
 .chart-container {

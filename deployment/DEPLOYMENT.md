@@ -181,11 +181,28 @@ ls -la /config/www/crashhockey
 ```
 
 **Permission Summary:**
-- **Root directory**: `775` (allows PHP to write config file during setup)
+- **Root directory**: `775` (CRITICAL - allows PHP to write config file during setup)
 - **Uploads/Sessions/Cache**: `775` (web server needs write access)
 - **Regular files**: `644` (readable by web server, not writable)
 - **Regular directories**: `755` (traversable by web server)
 - **Owner**: `911:911` (abc user in linuxserver container)
+
+**If you still get "Failed to write configuration file" error:**
+```bash
+# Re-apply permissions explicitly
+sudo chmod 775 /config/www/crashhockey
+sudo chown 911:911 /config/www/crashhockey
+
+# Check current permissions
+ls -ld /config/www/crashhockey
+
+# Should show: drwxrwxr-x 911 911
+
+# Test write access from inside container
+docker exec nginx touch /config/www/crashhockey/test.txt && \
+docker exec nginx rm /config/www/crashhockey/test.txt && \
+echo "Write access OK" || echo "Write access FAILED"
+```
 
 ---
 

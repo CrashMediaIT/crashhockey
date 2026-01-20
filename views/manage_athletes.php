@@ -24,7 +24,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
 
 <style>
     :root {
-        --primary: #ff4d00;
+        --primary: #7000a4;
     }
     .page-header {
         display: flex;

@@ -338,7 +338,7 @@ td {
 }
 
 .badge-credits {
-    background: #6b46c1;
+    background: #7000a4;
     color: white;
 }
 
@@ -391,7 +391,7 @@ td {
 }
 
 .btn-primary {
-    background: var(--primary, #ff4d00);
+    background: var(--primary, #7000a4);
     color: white;
     border: none;
     padding: 12px 24px;

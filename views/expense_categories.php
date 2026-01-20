@@ -112,7 +112,7 @@ td { border-bottom: 1px solid #1e293b; color: #e2e8f0; }
 .btn-icon { background: transparent; border: 1px solid #334155; color: #94a3b8; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px; }
 .btn-icon:hover { background: #1e293b; color: #fff; }
 .btn-icon.btn-danger:hover { background: #ef4444; border-color: #ef4444; color: white; }
-.btn-primary { background: var(--primary, #ff4d00); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+.btn-primary { background: var(--primary, #7000a4); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
 .btn-secondary { background: #334155; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
 .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); overflow-y: auto; }
 .modal-content { background: #0a0f16; margin: 100px auto; padding: 30px; border-radius: 12px; max-width: 600px; position: relative; color: #e2e8f0; }

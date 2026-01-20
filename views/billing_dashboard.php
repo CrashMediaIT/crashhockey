@@ -642,11 +642,11 @@ new Chart(expenseCategoriesCtx, {
         datasets: [{
             data: categoryValues,
             backgroundColor: [
-                '#ff4d00',
+                '#7000a4',
                 '#f59e0b',
                 '#10b981',
                 '#3b82f6',
-                '#6b46c1',
+                '#7000a4',
                 '#ec4899'
             ]
         }]

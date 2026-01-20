@@ -41,7 +41,7 @@ $unread_count = $notif_stmt->fetchColumn();
 
 <style>
     :root {
-        --primary: #ff4d00;
+        --primary: #7000a4;
     }
     .dashboard-header {
         display: flex;
