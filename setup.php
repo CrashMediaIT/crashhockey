@@ -770,13 +770,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $all_tables = [
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
                     'session_types', 'sessions', 'practice_plans', 'drill_categories', 'drills',
-                    'practice_plan_drills', 'bookings', 'athlete_sessions', 'team_sessions',
-                    'athlete_teams', 'teams', 'workout_templates', 'nutrition_templates',
-                    'athlete_notes', 'videos', 'video_notes', 'notifications', 'email_logs',
-                    'permissions', 'role_permissions', 'user_permissions', 'system_settings',
-                    'packages', 'user_credits', 'transactions', 'workout_plan_categories',
-                    'nutrition_plan_categories', 'practice_plan_categories', 'accounting_entries',
-                    'expense_categories', 'receipts', 'mileage_logs', 'refunds'
+                    'practice_plan_drills', 'bookings', 'athlete_teams', 'workout_templates', 
+                    'nutrition_templates', 'athlete_notes', 'videos', 'video_notes', 
+                    'notifications', 'email_logs', 'permissions', 'role_permissions', 
+                    'user_permissions', 'system_settings', 'packages', 'user_credits', 
+                    'workout_plan_categories', 'nutrition_plan_categories', 'practice_plan_categories',
+                    'expense_categories', 'cloud_receipts', 'mileage_logs', 'refunds'
                 ];
                 
                 $existing_tables = [];
