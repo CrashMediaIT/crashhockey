@@ -4,7 +4,46 @@ This file tracks all major updates and changes to the Crash Hockey platform. Eac
 
 ---
 
-## January 20, 2026 (Latest) - Enhanced Error Reporting for Setup
+## January 20, 2026 (Latest) - Fix: Permissions Set INSIDE Container
+
+**Primary Changes:**
+- **Permission fix**: Changed deployment to set permissions INSIDE container instead of on host
+- **Root cause**: PHP sees directory as "Writable: No" even when host permissions are correct
+- **Solution**: Using `docker exec nginx chmod/chown` ensures PHP-FPM can write to directory
+- **Verification**: Added PHP writability test to confirm directory is writable from PHP's perspective
+
+**Step 7 Updated - Now Sets Permissions Inside Container:**
+```bash
+docker exec nginx chown -R abc:abc /config/www/crashhockey
+docker exec nginx chmod 775 /config/www/crashhockey
+docker exec nginx chmod -R 775 /config/www/crashhockey/{uploads,sessions,cache}
+```
+
+**Why This Works:**
+- Setting permissions on host at `/portainer/nginx` may not reflect correctly inside container at `/config`
+- PHP-FPM runs inside container as 'abc' user - needs to see directory as writable
+- Setting permissions from inside container ensures correct user/group and writability
+- Verified with: `docker exec nginx sh -c '[ -w /config/www/crashhockey ] && echo "Writable"'`
+
+**Troubleshooting Updated:**
+- PRIMARY FIX now emphasizes container-based permission setting
+- Shows how to verify directory is writable by PHP
+- SELinux configuration marked as OPTIONAL (usually not needed with container permissions)
+
+**User Error Output That Led to This Fix:**
+```
+Failed to write configuration file to: /config/www/crashhockey/crashhockey.env
+Error: file_put_contents(...): Failed to open stream: Permission denied
+Directory: /config/www/crashhockey
+Writable: No  <-- Key issue
+Web server user: abc
+```
+
+Manual write test worked (`docker exec nginx touch`) but PHP saw directory as "Writable: No". Setting permissions inside container fixed this.
+
+---
+
+## January 20, 2026 - Enhanced Error Reporting for Setup
 
 **Primary Changes:**
 - **Detailed error messages**: Setup wizard now shows actual PHP errors instead of generic message

@@ -164,45 +164,50 @@ ls -la
 **IMPORTANT:** All permissions must be set on the **HOST** at `/portainer/nginx/` since that's where files actually exist.
 
 ```bash
-# Create required directories ON HOST
-sudo mkdir -p /portainer/nginx/www/crashhockey/uploads
-sudo mkdir -p /portainer/nginx/www/crashhockey/sessions
-sudo mkdir -p /portainer/nginx/www/crashhockey/cache
-sudo mkdir -p /portainer/nginx/log
+# Create required directories INSIDE container (this ensures PHP sees correct permissions)
+docker exec nginx mkdir -p /config/www/crashhockey/uploads
+docker exec nginx mkdir -p /config/www/crashhockey/sessions
+docker exec nginx mkdir -p /config/www/crashhockey/cache
 
-# Set ownership to NGINX user (UID 911 = 'abc' user in linuxserver containers)
-sudo chown -R 911:911 /portainer/nginx/www/crashhockey
-sudo chown -R 911:911 /portainer/nginx/log
+# Set ownership to 'abc' user INSIDE container (what PHP-FPM runs as)
+docker exec nginx chown -R abc:abc /config/www/crashhockey
 
-# Set directory permissions (755 for directories, 644 for files)
-sudo find /portainer/nginx/www/crashhockey -type d -exec chmod 755 {} \;
-sudo find /portainer/nginx/www/crashhockey -type f -exec chmod 644 {} \;
+# CRITICAL: Set root directory to 775 (allows PHP to write crashhockey.env during setup)
+docker exec nginx chmod 775 /config/www/crashhockey
 
-# Make writable directories (775 for uploads, sessions, cache, and root)
-sudo chmod 775 /portainer/nginx/www/crashhockey
-sudo chmod -R 775 /portainer/nginx/www/crashhockey/uploads
-sudo chmod -R 775 /portainer/nginx/www/crashhockey/sessions
-sudo chmod -R 775 /portainer/nginx/www/crashhockey/cache
+# Set upload/session/cache directories to 775 (web server needs write access)
+docker exec nginx chmod -R 775 /config/www/crashhockey/uploads
+docker exec nginx chmod -R 775 /config/www/crashhockey/sessions
+docker exec nginx chmod -R 775 /config/www/crashhockey/cache
 
-# Verify permissions
-ls -ld /portainer/nginx/www/crashhockey
-# Should show: drwxrwxr-x. 8 911 911 ... /portainer/nginx/www/crashhockey
+# Set standard permissions for other directories and files
+docker exec nginx find /config/www/crashhockey -type d -exec chmod 755 {} \;
+docker exec nginx find /config/www/crashhockey -type f -exec chmod 644 {} \;
 
-# CRITICAL FOR FEDORA: Fix SELinux context
-# SELinux blocks container writes by default on Fedora
-sudo chcon -R -t container_file_t /portainer/nginx/www/crashhockey
-sudo chcon -R -t container_file_t /portainer/nginx/log
+# Re-apply critical permissions (find command may have reset them)
+docker exec nginx chmod 775 /config/www/crashhockey
+docker exec nginx chmod -R 775 /config/www/crashhockey/uploads
+docker exec nginx chmod -R 775 /config/www/crashhockey/sessions
+docker exec nginx chmod -R 775 /config/www/crashhockey/cache
 
-# Make SELinux changes permanent
-sudo semanage fcontext -a -t container_file_t "/portainer/nginx/www/crashhockey(/.*)?"
-sudo restorecon -R /portainer/nginx/www/crashhockey
+# Verify permissions from inside container (what PHP actually sees)
+docker exec nginx ls -ld /config/www/crashhockey
+# Should show: drwxrwxr-x ... abc abc ... /config/www/crashhockey
 
-# Test write access from INSIDE container
-# Note: Inside container, path is /config (mounted from /portainer/nginx on host)
+# Test if directory is writable by PHP
+docker exec nginx sh -c '[ -w /config/www/crashhockey ] && echo "✅ Directory IS writable by PHP" || echo "❌ Directory NOT writable by PHP"'
+
+# Test write access from inside container
 docker exec nginx touch /config/www/crashhockey/test.txt && \
 docker exec nginx rm /config/www/crashhockey/test.txt && \
 echo "✅ Write access verified - setup can proceed" || \
-echo "❌ Write access FAILED - check SELinux with: sudo ausearch -m avc -ts recent"
+echo "❌ Write access FAILED"
+
+# OPTIONAL: If you still have issues on Fedora, configure SELinux on host
+# (Usually NOT needed if permissions are set inside container as shown above)
+# sudo chcon -R -t container_file_t /portainer/nginx/www/crashhockey
+# sudo semanage fcontext -a -t container_file_t "/portainer/nginx/www/crashhockey(/.*)?"
+# sudo restorecon -R /portainer/nginx/www/crashhockey
 ```
 
 **Permission Summary:**
@@ -397,23 +402,35 @@ docker exec nginx whoami
 
 **Solutions:**
 
-1. **Ensure root directory is writable:**
+1. **PRIMARY FIX - Set permissions INSIDE the container:**
+```bash
+# This fixes the issue where PHP sees directory as "Writable: No"
+docker exec nginx chown -R abc:abc /config/www/crashhockey
+docker exec nginx chmod 775 /config/www/crashhockey
+docker exec nginx chmod -R 775 /config/www/crashhockey/uploads
+docker exec nginx chmod -R 775 /config/www/crashhockey/sessions
+docker exec nginx chmod -R 775 /config/www/crashhockey/cache
+
+# Verify directory is now writable by PHP
+docker exec nginx sh -c '[ -w /config/www/crashhockey ] && echo "✅ Fixed" || echo "❌ Still not writable"'
+```
+
+2. **Alternative - Set permissions on host (less reliable):**
 ```bash
 sudo chmod 775 /portainer/nginx/www/crashhockey
 sudo chown 911:911 /portainer/nginx/www/crashhockey
 ```
 
-2. **If permissions look correct but still failing:**
-   - The setup wizard now shows detailed error messages
-   - Look for the actual PHP error in the setup page
-   - Check: directory path, writable status, and web server user
+3. **View detailed error from setup wizard:**
+   - The setup wizard shows: file path, error message, writable status, and web server user
+   - This helps identify the exact issue
 
-3. **Check PHP error log for details:**
+4. **Check PHP error log for details:**
 ```bash
 docker exec nginx tail -50 /config/log/php-error.log
 ```
 
-4. **Verify directory exists and is accessible:**
+5. **Verify directory exists and is accessible:**
 ```bash
 docker exec nginx ls -la /config/www/crashhockey/
 ```
