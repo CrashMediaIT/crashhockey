@@ -63,7 +63,8 @@ $allowed_pages = [
     'mileage_tracker'     => 'views/mileage_tracker.php',
     'refunds'             => 'views/refunds.php',
     'settings'            => 'views/settings.php',
-    'manage_athletes'     => 'views/manage_athletes.php'
+    'manage_athletes'     => 'views/manage_athletes.php',
+    'goals'               => 'views/goals.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
