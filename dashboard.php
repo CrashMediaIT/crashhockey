@@ -70,7 +70,8 @@ $allowed_pages = [
     'admin_settings'      => 'views/admin_settings.php',
     'admin_eval_framework' => 'views/admin_eval_framework.php',
     'admin_team_coaches'  => 'views/admin_team_coaches.php',
-    'admin_system_check'  => 'views/admin_system_check.php'
+    'admin_system_check'  => 'views/admin_system_check.php',
+    'admin_feature_import' => 'views/admin_feature_import.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
@@ -251,6 +252,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_eval_framework" class="nav-link <?= $page=='admin_eval_framework'?'active':'' ?>"><i class="fa-solid fa-list-check"></i> Eval Framework</a>
             <a href="?page=admin_team_coaches" class="nav-link <?= $page=='admin_team_coaches'?'active':'' ?>"><i class="fa-solid fa-user-tie"></i> Team Coaches</a>
             <a href="?page=admin_system_check" class="nav-link <?= $page=='admin_system_check'?'active':'' ?>"><i class="fa-solid fa-shield-alt"></i> System Validation</a>
+            <a href="?page=admin_feature_import" class="nav-link <?= $page=='admin_feature_import'?'active':'' ?>"><i class="fa-solid fa-file-import"></i> Feature Import</a>
             <a href="?page=admin_settings" class="nav-link <?= $page=='admin_settings'?'active':'' ?>"><i class="fa-solid fa-cog"></i> System Settings</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
         </nav>
