@@ -1,0 +1,60 @@
+# Environment files
+crashhockey.env
+.env
+*.env.local
+
+# Setup completion marker
+.setup_complete
+
+# Database backups
+*.sql.gz
+*.sql.zip
+backups/
+
+# Upload directories
+uploads/
+videos/
+receipts/
+images/user_uploads/
+
+# Logs
+*.log
+logs/
+error_log
+
+# Cache
+cache/
+*.cache
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Composer
+vendor/
+composer.lock
+
+# NPM
+node_modules/
+package-lock.json
+
+# Build files
+dist/
+build/
+
+# Configuration backups
+*.bak
+config.bak
