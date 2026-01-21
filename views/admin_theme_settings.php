@@ -995,7 +995,7 @@ $hero_subtitle = $theme_colors['hero_subtitle'] ?? 'Specialized on-ice and off-i
             
             <div class="form-group" id="logo_upload_field">
                 <label>Logo File (PNG, max 2MB)</label>
-                <input type="file" class="form-control" name="logo_file" accept=".png" onchange="previewImage(this, 'logo_preview')">
+                <input type="file" class="form-control" name="logo" accept=".png" onchange="previewImage(this, 'logo_preview')">
                 <small style="color: #94a3b8; display: block; margin-top: 8px;">Recommended size: 200x60px</small>
             </div>
             
@@ -1051,7 +1051,7 @@ $hero_subtitle = $theme_colors['hero_subtitle'] ?? 'Specialized on-ice and off-i
             
             <div class="form-group" id="hero_upload_field">
                 <label>Hero Image (PNG/JPG, max 5MB)</label>
-                <input type="file" class="form-control" name="hero_file" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'hero_preview')">
+                <input type="file" class="form-control" name="hero_image" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'hero_preview')">
                 <small style="color: #94a3b8; display: block; margin-top: 8px;">Recommended size: 1920x600px</small>
             </div>
             
@@ -1192,7 +1192,7 @@ $hero_subtitle = $theme_colors['hero_subtitle'] ?? 'Specialized on-ice and off-i
             
             <div class="form-group" id="program_upload_field">
                 <label>Program Image (PNG/JPG, max 5MB)</label>
-                <input type="file" class="form-control" name="program_file" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'program_preview')">
+                <input type="file" class="form-control" name="program_image" accept=".png,.jpg,.jpeg" onchange="previewImage(this, 'program_preview')">
             </div>
             
             <div class="form-group" id="program_url_field" style="display: none;">
@@ -1303,7 +1303,7 @@ document.getElementById('colorsForm').addEventListener('submit', async function(
     e.preventDefault();
     
     const formData = new FormData(this);
-    formData.append('action', 'save_colors');
+    formData.append('action', 'save');
     
     try {
         const response = await fetch('process_theme_settings.php', {
@@ -1399,7 +1399,7 @@ document.getElementById('brandingForm').addEventListener('submit', async functio
     e.preventDefault();
     
     const formData = new FormData(this);
-    formData.append('action', 'save_branding');
+    formData.append('action', 'save_logo');
     
     try {
         const response = await fetch('process_theme_settings.php', {
