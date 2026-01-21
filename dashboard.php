@@ -263,7 +263,10 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
             <a href="?page=admin_eval_framework" class="nav-link <?= $page=='admin_eval_framework'?'active':'' ?>"><i class="fa-solid fa-list-check"></i> Eval Framework</a>
             <a href="?page=admin_team_coaches" class="nav-link <?= $page=='admin_team_coaches'?'active':'' ?>"><i class="fa-solid fa-user-tie"></i> Team Coaches</a>
+            <a href="?page=admin_coach_termination" class="nav-link <?= $page=='admin_coach_termination'?'active':'' ?>"><i class="fa-solid fa-user-times"></i> Coach Termination</a>
             <a href="?page=admin_cron_jobs" class="nav-link <?= $page=='admin_cron_jobs'?'active':'' ?>"><i class="fa-solid fa-clock"></i> Cron Jobs</a>
+            <a href="?page=admin_audit_logs" class="nav-link <?= $page=='admin_audit_logs'?'active':'' ?>"><i class="fa-solid fa-history"></i> Audit Logs</a>
+            <a href="?page=admin_system_notifications" class="nav-link <?= $page=='admin_system_notifications'?'active':'' ?>"><i class="fa-solid fa-bullhorn"></i> System Notifications</a>
             <a href="?page=admin_database_backup" class="nav-link <?= $page=='admin_database_backup'?'active':'' ?>"><i class="fa-solid fa-database"></i> Database Backup</a>
             <a href="?page=admin_database_restore" class="nav-link <?= $page=='admin_database_restore'?'active':'' ?>"><i class="fa-solid fa-upload"></i> Database Restore</a>
             <a href="?page=admin_system_check" class="nav-link <?= $page=='admin_system_check'?'active':'' ?>"><i class="fa-solid fa-shield-alt"></i> System Validation</a>
@@ -300,6 +303,120 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         </div>
     </div>
 </aside>
+
+<?php
+// Get active system notifications
+$notifications_query = $pdo->query("
+    SELECT * FROM system_notifications
+    WHERE is_active = 1
+    AND start_time <= NOW()
+    AND (end_time IS NULL OR end_time >= NOW())
+    ORDER BY created_at DESC
+");
+$active_notifications = $notifications_query->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<?php if (!empty($active_notifications)): ?>
+    <style>
+        .system-notification-banner {
+            background: linear-gradient(135deg, #ff4500 0%, #ff6b00 100%);
+            color: #fff;
+            padding: 15px 40px;
+            position: relative;
+            z-index: 1000;
+            border-bottom: 2px solid #ff8800;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        .system-notification-banner.maintenance {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            border-bottom-color: #d97706;
+        }
+        
+        .system-notification-banner.alert {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-bottom-color: #b91c1c;
+        }
+        
+        .system-notification-banner.update {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border-bottom-color: #1d4ed8;
+        }
+        
+        .notification-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .notification-icon {
+            font-size: 24px;
+        }
+        
+        .notification-text h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        
+        .notification-text p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.95;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .system-notification-banner {
+                padding: 12px 15px;
+            }
+            
+            .notification-icon {
+                font-size: 20px;
+            }
+            
+            .notification-text h4 {
+                font-size: 14px;
+            }
+            
+            .notification-text p {
+                font-size: 12px;
+            }
+        }
+    </style>
+    
+    <?php foreach ($active_notifications as $notif): ?>
+        <div class="system-notification-banner <?= htmlspecialchars($notif['notification_type']) ?>">
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <?php if ($notif['notification_type'] === 'maintenance'): ?>
+                        <i class="fas fa-tools"></i>
+                    <?php elseif ($notif['notification_type'] === 'alert'): ?>
+                        <i class="fas fa-exclamation-triangle"></i>
+                    <?php else: ?>
+                        <i class="fas fa-info-circle"></i>
+                    <?php endif; ?>
+                </div>
+                <div class="notification-text">
+                    <h4><?= htmlspecialchars($notif['title']) ?></h4>
+                    <p><?= htmlspecialchars($notif['message']) ?></p>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <main class="main-content">
     <?php 

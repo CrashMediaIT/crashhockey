@@ -628,13 +628,31 @@ $frequency_labels = [
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Parameters (JSON)</label>
+                    <label class="form-label">Date Range (Optional)</label>
+                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
+                        <input 
+                            type="month" 
+                            id="dateFrom" 
+                            class="form-input" 
+                            placeholder="From">
+                        <span style="color: #64748b;">to</span>
+                        <input 
+                            type="month" 
+                            id="dateTo" 
+                            class="form-input" 
+                            placeholder="To">
+                    </div>
+                    <div class="help-text">Select date range for report data (e.g., Dec 2023 to Jan 2026). Leave empty for all-time data.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Additional Parameters (JSON)</label>
                     <textarea 
                         name="parameters" 
                         id="parameters" 
                         class="form-textarea" 
-                        placeholder='{"date_range": "30_days", "include_charts": true}'></textarea>
-                    <div class="help-text">Optional JSON object for report-specific parameters</div>
+                        placeholder='{"include_charts": true, "group_by": "month"}'></textarea>
+                    <div class="help-text">Optional JSON object for additional report-specific parameters (date range is auto-added above)</div>
                 </div>
                 
                 <div class="form-group">
@@ -718,16 +736,32 @@ document.getElementById('scheduleForm').addEventListener('submit', async functio
     
     const formData = new FormData(this);
     
-    // Validate JSON if provided
-    const params = formData.get('parameters');
-    if (params && params.trim()) {
+    // Get date range values
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    
+    // Get existing parameters
+    let params = {};
+    const paramsText = formData.get('parameters');
+    if (paramsText && paramsText.trim()) {
         try {
-            JSON.parse(params);
+            params = JSON.parse(paramsText);
         } catch (e) {
             showAlert('Invalid JSON in parameters field', 'error');
             return;
         }
     }
+    
+    // Add date range if provided
+    if (dateFrom || dateTo) {
+        params.date_range = {
+            from: dateFrom || null,
+            to: dateTo || null
+        };
+    }
+    
+    // Update parameters in form data
+    formData.set('parameters', JSON.stringify(params));
     
     try {
         const response = await fetch('../process_reports.php', {
