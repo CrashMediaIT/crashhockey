@@ -4,101 +4,85 @@ Professional hockey coaching and athlete management platform with comprehensive 
 
 ## 🚀 Quick Start
 
-1. **Setup Database**
-   ```bash
-   mysql -u username -p crashhockey < database_schema.sql
-   ```
+For complete deployment instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**
 
-2. **Run Setup Wizard**
-   - Navigate to: `https://yourdomain.com/setup.php`
-   - Complete 4-step configuration
-   - Creates admin account and configures system
+### Fast Deploy
+1. Clone repository: `git clone https://github.com/CrashMediaIT/crashhockey.git`
+2. Import database: `mysql -u user -p crashhockey < database_schema.sql`
+3. Run setup wizard: Navigate to `/setup.php`
+4. Login and start using the system
 
-3. **Login**
-   - Access: `https://yourdomain.com/login.php`
-   - Use admin credentials created in setup
+## 📋 Key Features
 
-## 📋 Features
-
-### User Roles
-- **Athletes** - Performance tracking, session booking, video reviews
-- **Parents** - View athlete progress, manage multiple children
-- **Coaches** - Athlete management, drill creation, practice planning
-- **Health Coaches** - Workout and nutrition plan management
-- **Team Coaches** - Team roster management
-- **Admins** - Full system access, accounting, reports
-
-### Core Modules
-- Performance Stats & Goals Tracking
-- Session Booking & Management
-- Video Analysis & Reviews
-- Workout Plans & Exercise Library
-- Nutrition Plans & Food Database
-- Drill Library & Practice Planning
-- Mileage Tracking
-- Expense Management
-- Comprehensive Reporting
+- **Multi-Role Support**: Athletes, Parents, Coaches, Health Coaches, Team Coaches, Admins
+- **Session Management**: Booking, scheduling, and attendance tracking
+- **Video Analysis**: Drill reviews and coach feedback
+- **Health & Fitness**: Workout plans and nutrition tracking
+- **Drill Library**: Create, import, and organize training drills
+- **Practice Planning**: Build comprehensive practice plans
+- **Performance Stats**: Track athlete progress and goals
+- **Financial Management**: Packages, billing, and expenses (Admin)
+- **Reports & Analytics**: Comprehensive reporting system (Admin)
 
 ## 📚 Documentation
 
-- **[NAVIGATION_RESTRUCTURE.md](NAVIGATION_RESTRUCTURE.md)** - Complete implementation guide
-- **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** - Security analysis and best practices
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Project overview
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with Docker instructions
+- **[NAVIGATION_REFERENCE.md](NAVIGATION_REFERENCE.md)** - Navigation structure and database schema reference
+- **[database_schema.sql](database_schema.sql)** - Complete database schema
 
-## 🛠️ Technical Stack
+## 🛠️ Technical Requirements
 
-- **Backend**: PHP 7.4+
-- **Database**: MySQL 5.7+ / MariaDB 10.3+
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Icons**: Font Awesome 6.5.1
-- **Fonts**: Inter (Google Fonts)
+- PHP 7.4+
+- MySQL 5.7+ / MariaDB 10.3+
+- Apache 2.4+ or Nginx 1.18+
+- 512MB RAM minimum
 
-## 📦 File Structure
+## 🔐 Security Features
+
+- SQL injection protection (PDO)
+- XSS protection (htmlspecialchars)
+- Password hashing (bcrypt)
+- Session security
+- Role-based access control
+
+## 📦 Project Structure
 
 ```
 /crashhockey/
-├── index.php                   # Entry point with DB fallback
-├── dashboard.php               # Main dashboard with navigation
-├── setup.php                   # Setup wizard
-├── database_schema.sql         # Complete DB schema
-├── views/                      # 33 view files
-│   ├── home.php
-│   ├── stats.php
-│   ├── sessions_*.php
-│   ├── video_*.php
-│   ├── health_*.php
-│   ├── drills_*.php
-│   ├── practice_*.php
-│   ├── accounting_*.php
-│   ├── admin_*.php
-│   └── ...
-└── DOCUMENTATION.md files
+├── index.php              # Entry point
+├── dashboard.php          # Main dashboard
+├── setup.php              # Setup wizard
+├── database_schema.sql    # Database schema
+├── DEPLOYMENT.md          # Deployment guide
+├── NAVIGATION_REFERENCE.md # Quick reference
+└── views/                 # 33 view files
+```
 
-## 🔐 Security
+## 🚢 Deployment
 
-- SQL injection protection (PDO prepared statements)
-- XSS protection (htmlspecialchars)
-- Password hashing (bcrypt)
-- Session-based authentication
-- Role-based access control
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for:
+- Complete installation instructions
+- Docker deployment with docker-compose
+- File permissions (including all docker exec commands)
+- Production hardening
+- Backup strategies
+- Troubleshooting guide
 
-## 📈 Status
+## 📈 Current Status
 
-✅ **Navigation Structure**: Complete
-✅ **Database Schema**: Complete
-✅ **View Files**: 33 files created
-✅ **Documentation**: Comprehensive
-✅ **Security Audit**: Complete
-
-⏳ **Pending**: Database queries and business logic implementation
-
-## 🤝 Contributing
-
-1. Review documentation files
-2. Follow coding standards
-3. Test thoroughly
-4. Update documentation
+✅ Navigation Structure Complete
+✅ Database Schema Complete  
+✅ All View Files Created
+✅ Documentation Complete
+✅ Security Audit Complete
 
 ## 📞 Support
 
-For issues or questions, review the comprehensive documentation files included in this repository.
+Review the comprehensive documentation files:
+- DEPLOYMENT.md - Installation and deployment
+- NAVIGATION_REFERENCE.md - Structure reference
+- Check error logs for troubleshooting
+
+---
+
+**Version**: 1.0 | **Last Updated**: January 21, 2026

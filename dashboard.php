@@ -32,57 +32,48 @@ $allowed_pages = [
     // Main Menu
     'home'                    => 'views/home.php',
     'stats'                   => 'views/stats.php',
-    'upcoming_sessions'       => 'views/upcoming_sessions.php',
-    'booking'                 => 'views/schedule.php',
-    'drill_review'            => 'views/video.php',
-    'coaches_reviews'         => 'views/coaches_reviews.php',
-    'strength_conditioning'   => 'views/workouts.php',
-    'nutrition'               => 'views/nutrition.php',
+    'upcoming_sessions'       => 'views/sessions_upcoming.php',
+    'booking'                 => 'views/sessions_booking.php',
+    'drill_review'            => 'views/video_drill_review.php',
+    'coaches_reviews'         => 'views/video_coach_reviews.php',
+    'strength_conditioning'   => 'views/health_workouts.php',
+    'nutrition'               => 'views/health_nutrition.php',
     
     // Team (Team Coaches)
     'team_roster'             => 'views/team_roster.php',
     
     // Coaches Corner
-    'drill_library'           => 'views/drill_library.php',
-    'create_drill'            => 'views/create_drill.php',
-    'import_drill'            => 'views/import_drill.php',
+    'drill_library'           => 'views/drills_library.php',
+    'create_drill'            => 'views/drills_create.php',
+    'import_drill'            => 'views/drills_import.php',
     'practice_library'        => 'views/practice_library.php',
-    'create_practice'         => 'views/create_practice.php',
-    'roster'                  => 'views/athletes.php',
-    'mileage'                 => 'views/mileage.php',
+    'create_practice'         => 'views/practice_create.php',
+    'roster'                  => 'views/coach_roster.php',
+    'mileage'                 => 'views/travel_mileage.php',
     
     // Accounting and Reports (Admin)
     'accounting_dashboard'    => 'views/accounting_dashboard.php',
-    'billing_dashboard'       => 'views/billing_dashboard.php',
-    'reports'                 => 'views/reports.php',
-    'schedules'               => 'views/schedules.php',
-    'credits_refunds'         => 'views/credits_refunds.php',
-    'expenses'                => 'views/expenses.php',
-    'products'                => 'views/products.php',
+    'billing_dashboard'       => 'views/accounting_billing.php',
+    'reports'                 => 'views/accounting_reports.php',
+    'schedules'               => 'views/accounting_schedules.php',
+    'credits_refunds'         => 'views/accounting_credits.php',
+    'expenses'                => 'views/accounting_expenses.php',
+    'products'                => 'views/accounting_products.php',
     
     // HR (Admin)
-    'termination'             => 'views/termination.php',
+    'termination'             => 'views/hr_termination.php',
     
     // Administration (Admin)
-    'all_users'               => 'views/all_users.php',
-    'categories'              => 'views/categories.php',
-    'eval_framework'          => 'views/eval_framework.php',
-    'system_notification'     => 'views/system_notification.php',
-    'audit_log'               => 'views/audit_log.php',
-    'cron_jobs'               => 'views/cron_jobs.php',
-    'system_tools'            => 'views/system_tools.php',
+    'all_users'               => 'views/admin_users.php',
+    'categories'              => 'views/admin_categories.php',
+    'eval_framework'          => 'views/admin_eval_framework.php',
+    'system_notification'     => 'views/admin_notifications.php',
+    'audit_log'               => 'views/admin_audit_log.php',
+    'cron_jobs'               => 'views/admin_cron_jobs.php',
+    'system_tools'            => 'views/admin_system_tools.php',
     
-    // Legacy/General
-    'session_history'         => 'views/session_history.php',
-    'payment_history'         => 'views/payment_history.php',
+    // Additional views
     'profile'                 => 'views/profile.php',
-    'library_workouts'        => 'views/library_workouts.php',
-    'library_nutrition'       => 'views/library_nutrition.php',
-    'create_session'          => 'views/create_session.php',
-    'session_templates'       => 'views/library_sessions.php',
-    'admin_locations'         => 'views/admin_locations.php',
-    'admin_session_types'     => 'views/admin_session_types.php',
-    'admin_discounts'         => 'views/admin_discounts.php',
     'settings'                => 'views/settings.php'
 ];
 
