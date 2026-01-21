@@ -552,32 +552,79 @@ $jobs = $jobs_query->fetchAll(PDO::FETCH_ASSOC);
                 
                 <div class="form-group">
                     <label class="form-label">
-                        Schedule <span class="required">*</span>
+                        Schedule Type <span class="required">*</span>
                     </label>
-                    <input type="text" id="jobSchedule" name="schedule" class="form-input" required placeholder="0 * * * *" pattern="^[\d\*\-\/,\s]+$">
+                    <select id="scheduleType" class="form-select" onchange="updateScheduleUI()" required>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="custom">Custom (Cron Expression)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="dailyOptions">
+                    <label class="form-label">Time <span class="required">*</span></label>
+                    <input type="time" id="dailyTime" class="form-input" value="00:00">
+                </div>
+
+                <div class="form-group" id="weeklyOptions" style="display: none;">
+                    <label class="form-label">Day of Week <span class="required">*</span></label>
+                    <select id="weeklyDay" class="form-select">
+                        <option value="0">Sunday</option>
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                    </select>
+                    <label class="form-label" style="margin-top: 10px;">Time <span class="required">*</span></label>
+                    <input type="time" id="weeklyTime" class="form-input" value="00:00">
+                </div>
+
+                <div class="form-group" id="monthlyOptions" style="display: none;">
+                    <label class="form-label">Day of Month <span class="required">*</span></label>
+                    <select id="monthlyDay" class="form-select">
+                        <option value="1">1st of month</option>
+                        <option value="15">15th of month</option>
+                        <option value="L">Last day of month</option>
+                        <?php for($i = 2; $i <= 31; $i++): ?>
+                            <?php if($i != 15): ?>
+                                <option value="<?= $i ?>"><?= $i ?><?php
+                                    if($i == 2 || $i == 22) echo 'nd';
+                                    elseif($i == 3 || $i == 23) echo 'rd';
+                                    elseif($i == 21 || $i == 31) echo 'st';
+                                    else echo 'th';
+                                ?> of month</option>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    </select>
+                    <label class="form-label" style="margin-top: 10px;">Time <span class="required">*</span></label>
+                    <input type="time" id="monthlyTime" class="form-input" value="00:00">
+                </div>
+
+                <div class="form-group" id="customOptions" style="display: none;">
+                    <label class="form-label">Cron Expression <span class="required">*</span></label>
+                    <input type="text" id="customCron" class="form-input" placeholder="0 * * * *" pattern="^[\d\*\-\/,\s]+$">
                     <div class="help-text">Cron expression (5 fields: minute hour day month weekday)</div>
                     
                     <div class="schedule-helpers">
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('0 * * * *')">
+                        <button type="button" class="schedule-helper-btn" onclick="setCustomSchedule('0 * * * *')">
                             <i class="fas fa-clock"></i> Every Hour
                         </button>
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('0 0 * * *')">
-                            <i class="fas fa-moon"></i> Daily (Midnight)
+                        <button type="button" class="schedule-helper-btn" onclick="setCustomSchedule('*/15 * * * *')">
+                            <i class="fas fa-redo"></i> Every 15 Min
                         </button>
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('0 2 * * *')">
-                            <i class="fas fa-moon"></i> Daily (2 AM)
+                        <button type="button" class="schedule-helper-btn" onclick="setCustomSchedule('0 */3 * * *')">
+                            <i class="fas fa-clock"></i> Every 3 Hours
                         </button>
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('0 0 * * 0')">
-                            <i class="fas fa-calendar-week"></i> Weekly (Sunday)
-                        </button>
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('0 0 1 * *')">
-                            <i class="fas fa-calendar"></i> Monthly (1st)
-                        </button>
-                        <button type="button" class="schedule-helper-btn" onclick="setSchedule('*/5 * * * *')">
-                            <i class="fas fa-redo"></i> Every 5 Min
+                        <button type="button" class="schedule-helper-btn" onclick="setCustomSchedule('0 */6 * * *')">
+                            <i class="fas fa-clock"></i> Every 6 Hours
                         </button>
                     </div>
                 </div>
+
+                <input type="hidden" id="jobSchedule" name="schedule" required>
                 
                 <div class="form-group">
                     <label class="form-label">
@@ -656,9 +703,72 @@ function closeModal() {
     document.getElementById('jobModal').classList.remove('show');
 }
 
-function setSchedule(expression) {
-    document.getElementById('jobSchedule').value = expression;
+function setCustomSchedule(expression) {
+    document.getElementById('customCron').value = expression;
+    updateScheduleFromUI();
 }
+
+function updateScheduleUI() {
+    const type = document.getElementById('scheduleType').value;
+    
+    // Hide all options
+    document.getElementById('dailyOptions').style.display = 'none';
+    document.getElementById('weeklyOptions').style.display = 'none';
+    document.getElementById('monthlyOptions').style.display = 'none';
+    document.getElementById('customOptions').style.display = 'none';
+    
+    // Show selected option
+    if (type === 'daily') {
+        document.getElementById('dailyOptions').style.display = 'block';
+    } else if (type === 'weekly') {
+        document.getElementById('weeklyOptions').style.display = 'block';
+    } else if (type === 'monthly') {
+        document.getElementById('monthlyOptions').style.display = 'block';
+    } else if (type === 'custom') {
+        document.getElementById('customOptions').style.display = 'block';
+    }
+    
+    updateScheduleFromUI();
+}
+
+function updateScheduleFromUI() {
+    const type = document.getElementById('scheduleType').value;
+    let cron = '';
+    
+    if (type === 'daily') {
+        const time = document.getElementById('dailyTime').value.split(':');
+        cron = `${time[1]} ${time[0]} * * *`;
+    } else if (type === 'weekly') {
+        const time = document.getElementById('weeklyTime').value.split(':');
+        const day = document.getElementById('weeklyDay').value;
+        cron = `${time[1]} ${time[0]} * * ${day}`;
+    } else if (type === 'monthly') {
+        const time = document.getElementById('monthlyTime').value.split(':');
+        const day = document.getElementById('monthlyDay').value;
+        if (day === 'L') {
+            // Last day of month - use 28 as approximation, cron doesn't support 'L'
+            cron = `${time[1]} ${time[0]} 28 * *`;
+        } else {
+            cron = `${time[1]} ${time[0]} ${day} * *`;
+        }
+    } else if (type === 'custom') {
+        cron = document.getElementById('customCron').value;
+    }
+    
+    document.getElementById('jobSchedule').value = cron;
+}
+
+// Add event listeners to update schedule on change
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('dailyTime')) {
+        document.getElementById('dailyTime').addEventListener('change', updateScheduleFromUI);
+        document.getElementById('weeklyDay').addEventListener('change', updateScheduleFromUI);
+        document.getElementById('weeklyTime').addEventListener('change', updateScheduleFromUI);
+        document.getElementById('monthlyDay').addEventListener('change', updateScheduleFromUI);
+        document.getElementById('monthlyTime').addEventListener('change', updateScheduleFromUI);
+        document.getElementById('customCron').addEventListener('input', updateScheduleFromUI);
+    }
+});
 
 function submitForm(event) {
     event.preventDefault();

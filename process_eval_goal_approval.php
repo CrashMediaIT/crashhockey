@@ -27,11 +27,11 @@ $is_coach = ($user_role === 'coach' || $user_role === 'coach_plus' || $user_role
 function sendApprovalNotification($pdo, $to_user_id, $type, $details) {
     try {
         // Get user email
-        $user_stmt = $pdo->prepare("SELECT email, first_name FROM users WHERE id = ?");
+        $user_stmt = $pdo->prepare("SELECT email, first_name, email_notifications FROM users WHERE id = ?");
         $user_stmt->execute([$to_user_id]);
         $user = $user_stmt->fetch();
         
-        if (!$user) {
+        if (!$user || !$user['email_notifications']) {
             return false;
         }
         
@@ -64,9 +64,27 @@ function sendApprovalNotification($pdo, $to_user_id, $type, $details) {
         
         $notification_stmt->execute([$to_user_id, $type, $title, $message]);
         
-        // TODO: Send email using mailer.php if needed
-        // require_once 'mailer.php';
-        // sendEmail($user['email'], $subject, $message);
+        // Send email using mailer.php
+        require_once 'mailer.php';
+        
+        $email_body = "
+            <h2>{$title}</h2>
+            <p>Hello {$user['first_name']},</p>
+            <p>{$message}</p>
+            <hr>
+            <p><strong>Step:</strong> {$step_title}</p>
+        ";
+        
+        if ($note) {
+            $email_body .= "<p><strong>Note:</strong> {$note}</p>";
+        }
+        
+        $email_body .= "
+            <p>Please log in to your account to view more details.</p>
+            <p><a href='" . ($_SERVER['REQUEST_SCHEME'] ?? 'https') . "://" . ($_SERVER['HTTP_HOST'] ?? 'crashhockey.com') . "/dashboard.php?page=evaluations_goals'>View Evaluations</a></p>
+        ";
+        
+        sendEmail($user['email'], $title, $email_body);
         
         return true;
     } catch (Exception $e) {

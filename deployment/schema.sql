@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS `users` (
   `is_verified` TINYINT(1) DEFAULT 0,
   `verification_code` VARCHAR(10) DEFAULT NULL,
   `force_pass_change` TINYINT(1) DEFAULT 0,
+  `is_deleted` TINYINT(1) DEFAULT 0 COMMENT 'Soft delete flag for terminated users',
+  `deleted_at` TIMESTAMP NULL DEFAULT NULL,
+  `deleted_by` INT DEFAULT NULL COMMENT 'Admin who deleted this user',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`assigned_coach_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_email` (`email`),
@@ -1410,4 +1413,45 @@ CREATE TABLE IF NOT EXISTS `backup_history` (
   INDEX `idx_backup_job` (`backup_job_id`),
   INDEX `idx_status` (`status`),
   INDEX `idx_backup_date` (`backup_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- PHASE 5 TABLES
+-- =========================================================
+
+-- Audit Logs Table
+CREATE TABLE IF NOT EXISTS `audit_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `action_type` VARCHAR(100) NOT NULL COMMENT 'INSERT, UPDATE, DELETE',
+  `table_name` VARCHAR(100) NOT NULL,
+  `record_id` INT NOT NULL,
+  `old_values` TEXT DEFAULT NULL COMMENT 'JSON encoded old values',
+  `new_values` TEXT DEFAULT NULL COMMENT 'JSON encoded new values',
+  `ip_address` VARCHAR(45) DEFAULT NULL,
+  `user_agent` VARCHAR(500) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_user` (`user_id`),
+  INDEX `idx_action` (`action_type`),
+  INDEX `idx_table_record` (`table_name`, `record_id`),
+  INDEX `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- System Notifications Table (Global Maintenance Notifications)
+CREATE TABLE IF NOT EXISTS `system_notifications` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `notification_type` ENUM('maintenance', 'update', 'alert') NOT NULL DEFAULT 'maintenance',
+  `start_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `end_time` TIMESTAMP NULL DEFAULT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_active` (`is_active`),
+  INDEX `idx_times` (`start_time`, `end_time`),
+  INDEX `idx_type` (`notification_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
