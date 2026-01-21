@@ -73,6 +73,9 @@ $allowed_pages = [
     'admin_system_check'  => 'views/admin_system_check.php',
     'admin_feature_import' => 'views/admin_feature_import.php',
     'admin_database_tools' => 'views/admin_database_tools.php',
+    'admin_cron_jobs'     => 'views/admin_cron_jobs.php',
+    'admin_database_backup' => 'views/admin_database_backup.php',
+    'admin_database_restore' => 'views/admin_database_restore.php',
     'reports'             => 'views/reports.php',
     'report_view'         => 'views/report_view.php',
     'scheduled_reports'   => 'views/scheduled_reports.php'
@@ -257,9 +260,12 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_permissions" class="nav-link <?= $page=='admin_permissions'?'active':'' ?>"><i class="fa-solid fa-shield-halved"></i> Permissions</a>
             <a href="?page=admin_eval_framework" class="nav-link <?= $page=='admin_eval_framework'?'active':'' ?>"><i class="fa-solid fa-list-check"></i> Eval Framework</a>
             <a href="?page=admin_team_coaches" class="nav-link <?= $page=='admin_team_coaches'?'active':'' ?>"><i class="fa-solid fa-user-tie"></i> Team Coaches</a>
+            <a href="?page=admin_cron_jobs" class="nav-link <?= $page=='admin_cron_jobs'?'active':'' ?>"><i class="fa-solid fa-clock"></i> Cron Jobs</a>
+            <a href="?page=admin_database_backup" class="nav-link <?= $page=='admin_database_backup'?'active':'' ?>"><i class="fa-solid fa-database"></i> Database Backup</a>
+            <a href="?page=admin_database_restore" class="nav-link <?= $page=='admin_database_restore'?'active':'' ?>"><i class="fa-solid fa-upload"></i> Database Restore</a>
             <a href="?page=admin_system_check" class="nav-link <?= $page=='admin_system_check'?'active':'' ?>"><i class="fa-solid fa-shield-alt"></i> System Validation</a>
             <a href="?page=admin_feature_import" class="nav-link <?= $page=='admin_feature_import'?'active':'' ?>"><i class="fa-solid fa-file-import"></i> Feature Import</a>
-            <a href="?page=admin_database_tools" class="nav-link <?= $page=='admin_database_tools'?'active':'' ?>"><i class="fa-solid fa-database"></i> Database Tools</a>
+            <a href="?page=admin_database_tools" class="nav-link <?= $page=='admin_database_tools'?'active':'' ?>"><i class="fa-solid fa-tools"></i> Database Tools</a>
             <a href="?page=admin_settings" class="nav-link <?= $page=='admin_settings'?'active':'' ?>"><i class="fa-solid fa-cog"></i> System Settings</a>
             <a href="?page=settings" class="nav-link <?= $page=='settings'?'active':'' ?>"><i class="fa-solid fa-gears"></i> Global Settings</a>
         </nav>

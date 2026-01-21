@@ -1344,3 +1344,70 @@ CREATE TABLE IF NOT EXISTS `database_maintenance_logs` (
   INDEX `idx_action_type` (`action_type`),
   INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================================================
+-- PHASE 4 FEATURES
+-- =========================================================
+
+-- Cron Jobs Table
+CREATE TABLE IF NOT EXISTS `cron_jobs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `command` VARCHAR(500) NOT NULL,
+  `schedule` VARCHAR(100) NOT NULL COMMENT 'Cron expression (e.g., 0 2 * * *)',
+  `type` ENUM('report', 'admin', 'backup', 'maintenance') NOT NULL DEFAULT 'admin',
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `parameters` TEXT DEFAULT NULL COMMENT 'JSON encoded parameters',
+  `created_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_run` TIMESTAMP NULL DEFAULT NULL,
+  `next_run` TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_status` (`status`),
+  INDEX `idx_type` (`type`),
+  INDEX `idx_next_run` (`next_run`),
+  INDEX `idx_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Backup Jobs Table
+CREATE TABLE IF NOT EXISTS `backup_jobs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `schedule` VARCHAR(100) NOT NULL COMMENT 'Cron expression',
+  `backup_type` ENUM('manual', 'scheduled') NOT NULL DEFAULT 'scheduled',
+  `destination_type` ENUM('nextcloud', 'smb', 'both') NOT NULL DEFAULT 'nextcloud',
+  `nextcloud_folder` VARCHAR(500) DEFAULT '/CrashHockey/Backups/',
+  `smb_path` VARCHAR(500) DEFAULT NULL,
+  `smb_username` VARCHAR(255) DEFAULT NULL,
+  `smb_password` TEXT DEFAULT NULL COMMENT 'AES-256 encrypted',
+  `smb_domain` VARCHAR(255) DEFAULT NULL,
+  `retention_days` INT DEFAULT 30,
+  `last_backup` TIMESTAMP NULL DEFAULT NULL,
+  `next_backup` TIMESTAMP NULL DEFAULT NULL,
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `created_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_status` (`status`),
+  INDEX `idx_next_backup` (`next_backup`),
+  INDEX `idx_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Backup History Table
+CREATE TABLE IF NOT EXISTS `backup_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `backup_job_id` INT DEFAULT NULL,
+  `filename` VARCHAR(500) NOT NULL,
+  `file_size` BIGINT DEFAULT NULL COMMENT 'Size in bytes',
+  `destination` VARCHAR(500) NOT NULL,
+  `backup_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `status` ENUM('success', 'failed') NOT NULL DEFAULT 'success',
+  `error_message` TEXT DEFAULT NULL,
+  FOREIGN KEY (`backup_job_id`) REFERENCES `backup_jobs`(`id`) ON DELETE SET NULL,
+  INDEX `idx_backup_job` (`backup_job_id`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_backup_date` (`backup_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

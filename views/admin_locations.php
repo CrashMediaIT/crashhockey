@@ -45,9 +45,26 @@ $locations = $pdo->query("
         font-weight: 700;
         font-size: 14px;
         transition: all 0.2s;
+        border: none;
+        cursor: pointer;
     }
     .btn-create:hover {
-        background: #e64500;
+        background: #5a0080;
+    }
+    .btn-secondary {
+        background: transparent;
+        border: 1px solid #1e293b;
+        color: #94a3b8;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+        border-color: var(--primary);
+        color: var(--primary);
     }
     .locations-table {
         width: 100%;
@@ -199,9 +216,14 @@ $locations = $pdo->query("
     <h1 class="page-title">
         <i class="fas fa-map-marker-alt"></i> Manage Locations
     </h1>
-    <button onclick="openCreateModal()" class="btn-create">
-        <i class="fas fa-plus"></i> Add Location
-    </button>
+    <div>
+        <button onclick="testGoogleAPI()" class="btn-secondary" style="margin-right: 10px;">
+            <i class="fas fa-vial"></i> Test Google API
+        </button>
+        <button onclick="openCreateModal()" class="btn-create">
+            <i class="fas fa-plus"></i> Add Location
+        </button>
+    </div>
 </div>
 
 <?php if (empty($locations)): ?>
@@ -466,6 +488,30 @@ function deleteLocation(id) {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+function testGoogleAPI() {
+    const formData = new FormData();
+    formData.append('csrf_token', '<?= csrfToken() ?>');
+    
+    fetch('process_test_google_api.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const message = document.createElement('div');
+            message.innerHTML = data.message;
+            const text = message.innerText || message.textContent;
+            alert('✓ ' + text);
+        } else {
+            alert('✗ Test failed:\n\n' + data.message);
+        }
+    })
+    .catch(err => {
+        alert('✗ Error testing API:\n\n' + err.message);
+    });
 }
 
 // Close modal when clicking outside

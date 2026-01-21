@@ -506,6 +506,9 @@ function getSetting($settings, $key, $default = '') {
             <button type="button" class="btn-secondary" onclick="testNextcloud()">
                 <i class="fas fa-plug"></i> Test Connection
             </button>
+            <button type="button" class="btn-secondary" onclick="testReceiptUpload()">
+                <i class="fas fa-receipt"></i> Test Receipt Folder
+            </button>
         </div>
     </form>
 </div>
@@ -665,6 +668,27 @@ function testNextcloud() {
             alert('✓ Nextcloud connection successful!\n\n' + data.message);
         } else {
             alert('✗ Connection failed:\n\n' + data.message);
+        }
+    });
+}
+
+function testReceiptUpload() {
+    const form = document.querySelector('#tab-nextcloud form');
+    const formData = new FormData(form);
+    
+    fetch('process_test_nextcloud.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const message = document.createElement('div');
+            message.innerHTML = data.message;
+            const text = message.innerText || message.textContent;
+            alert('✓ ' + text);
+        } else {
+            alert('✗ Test failed:\n\n' + data.message);
         }
     });
 }
