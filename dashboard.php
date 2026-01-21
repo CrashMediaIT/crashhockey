@@ -8,6 +8,11 @@ error_reporting(E_ALL);
 session_start();
 require_once __DIR__ . '/db_config.php';
 
+// Check database connection
+if (!$db_connected || $pdo === null) {
+    die("Database connection failed. Please check your configuration. Error: " . ($db_error ?? 'Unknown error'));
+}
+
 if (!isset($_SESSION['logged_in'])) { header("Location: login.php"); exit(); }
 
 $user_id   = $_SESSION['user_id'];
