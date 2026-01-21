@@ -9,25 +9,31 @@ crashhockey.env
 # Database backups
 *.sql.gz
 *.sql.zip
-backups/
+backups/*
+!backups/.gitkeep
 
 # Upload directories
-uploads/
-videos/
-receipts/
-images/user_uploads/
+uploads/*
+!uploads/.gitkeep
+videos/*
+!videos/.gitkeep
+receipts/*
+!receipts/.gitkeep
 
 # Logs
 *.log
-logs/
+logs/*
+!logs/.gitkeep
 error_log
 
 # Cache
-cache/
+cache/*
+!cache/.gitkeep
 *.cache
 
 # Temporary files
-tmp/
+tmp/*
+!tmp/.gitkeep
 temp/
 *.tmp
 
