@@ -756,15 +756,6 @@ class FeatureImporter {
     }
     
     /**
-     * Clean up extracted files
-     */
-    private function cleanupExtractedFiles($extract_path) {
-        if (file_exists($extract_path)) {
-            $this->deleteDirectory($extract_path);
-        }
-    }
-    
-    /**
      * Recursively delete directory
      */
     private function deleteDirectory($dir) {
