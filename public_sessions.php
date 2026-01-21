@@ -9,6 +9,7 @@
     <link rel="icon" type="image/png" href="https://images.crashmedia.ca/images/2026/01/18/logo.png">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/theme-variables.php">
     <link rel="stylesheet" href="style.css">
     <style>
         .sessions-page {

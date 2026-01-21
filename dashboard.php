@@ -79,6 +79,7 @@ $allowed_pages = [
     'admin_audit_logs'    => 'views/admin_audit_logs.php',
     'admin_coach_termination' => 'views/admin_coach_termination.php',
     'admin_system_notifications' => 'views/admin_system_notifications.php',
+    'admin_theme_settings' => 'views/admin_theme_settings.php',
     'reports'             => 'views/reports.php',
     'report_view'         => 'views/report_view.php',
     'scheduled_reports'   => 'views/scheduled_reports.php'
@@ -93,6 +94,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <title>Crash Hockey Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/theme-variables.php">
     <style>
         :root { --primary: #7000a4; --bg: #06080b; --sidebar: #020305; --border: #1e293b; --text: #94a3b8; }
         * { box-sizing: border-box; }
@@ -267,6 +269,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=admin_cron_jobs" class="nav-link <?= $page=='admin_cron_jobs'?'active':'' ?>"><i class="fa-solid fa-clock"></i> Cron Jobs</a>
             <a href="?page=admin_audit_logs" class="nav-link <?= $page=='admin_audit_logs'?'active':'' ?>"><i class="fa-solid fa-history"></i> Audit Logs</a>
             <a href="?page=admin_system_notifications" class="nav-link <?= $page=='admin_system_notifications'?'active':'' ?>"><i class="fa-solid fa-bullhorn"></i> System Notifications</a>
+            <a href="?page=admin_theme_settings" class="nav-link <?= $page=='admin_theme_settings'?'active':'' ?>"><i class="fa-solid fa-palette"></i> Theme Settings</a>
             <a href="?page=admin_database_backup" class="nav-link <?= $page=='admin_database_backup'?'active':'' ?>"><i class="fa-solid fa-database"></i> Database Backup</a>
             <a href="?page=admin_database_restore" class="nav-link <?= $page=='admin_database_restore'?'active':'' ?>"><i class="fa-solid fa-upload"></i> Database Restore</a>
             <a href="?page=admin_system_check" class="nav-link <?= $page=='admin_system_check'?'active':'' ?>"><i class="fa-solid fa-shield-alt"></i> System Validation</a>

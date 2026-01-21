@@ -1216,6 +1216,24 @@ INSERT IGNORE INTO `system_settings` (`setting_key`, `setting_value`) VALUES
 ('debug_mode', '0');
 
 -- =========================================================
+-- DEFAULT THEME COLORS
+-- =========================================================
+
+INSERT IGNORE INTO `theme_settings` (`setting_name`, `setting_value`) VALUES
+('primary_color', '#7000a4'),
+('secondary_color', '#c0c0c0'),
+('background_color', '#06080b'),
+('card_background_color', '#0d1117'),
+('text_color', '#ffffff'),
+('text_muted_color', '#94a3b8'),
+('border_color', '#1e293b'),
+('sidebar_color', '#020305'),
+('button_hover_color', '#a78bfa'),
+('success_color', '#22c55e'),
+('error_color', '#ef4444'),
+('warning_color', '#f59e0b');
+
+-- =========================================================
 -- DEFAULT PLAN CATEGORIES
 -- =========================================================
 
@@ -1454,4 +1472,15 @@ CREATE TABLE IF NOT EXISTS `system_notifications` (
   INDEX `idx_active` (`is_active`),
   INDEX `idx_times` (`start_time`, `end_time`),
   INDEX `idx_type` (`notification_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Theme Settings
+CREATE TABLE IF NOT EXISTS `theme_settings` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `setting_name` VARCHAR(50) NOT NULL UNIQUE,
+  `setting_value` VARCHAR(7) NOT NULL COMMENT 'Hex color code',
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_by` INT DEFAULT NULL,
+  FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_setting_name` (`setting_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

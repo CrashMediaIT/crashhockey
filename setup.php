@@ -329,6 +329,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                         $error .= 'The database initialization did not complete successfully. Please go back to Step 2 and retry database initialization.<br><br>';
                         $error .= '<form method="POST" style="margin-top: 10px;"><input type="hidden" name="step" value="2"><button type="submit" class="btn" style="background: #7000a4;">← Back to Database Initialization</button></form>';
                     } else {
+                        // VERIFY THEME_SETTINGS TABLE EXISTS
+                        $result = $pdo->query("SHOW TABLES LIKE 'theme_settings'");
+                        if ($result->rowCount() === 0) {
+                            $error = '<strong>WARNING:</strong> theme_settings table does not exist!<br><br>';
+                            $error .= 'The theme customization feature will not be available. You can run the schema.sql file again to add it.<br><br>';
+                            $error .= '<form method="POST" style="margin-top: 10px;"><input type="hidden" name="step" value="2"><button type="submit" class="btn" style="background: #7000a4;">← Back to Database Initialization</button></form>';
+                        }
+                    }
+                    
+                    if (!$error) {
                         // Save SMTP settings to database
                         $settings = [
                             'smtp_host' => $smtp_host,
