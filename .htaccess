@@ -60,12 +60,13 @@ Options -Indexes
     php_value session.cookie_samesite Strict
 </IfModule>
 
-# Limit file upload size (100MB)
+# Limit file upload size (10GB for videos)
 <IfModule mod_php7.c>
-    php_value upload_max_filesize 100M
-    php_value post_max_size 105M
-    php_value max_execution_time 300
-    php_value max_input_time 300
+    php_value upload_max_filesize 10240M
+    php_value post_max_size 10250M
+    php_value max_execution_time 3600
+    php_value max_input_time 3600
+    php_value memory_limit 512M
 </IfModule>
 
 # Protect against SQL injection

@@ -16,10 +16,10 @@ class FileUploadValidator {
     
     // Maximum file sizes (in bytes)
     private static $maxSizes = [
-        'image' => 5 * 1024 * 1024,      // 5MB
-        'video' => 100 * 1024 * 1024,    // 100MB
-        'document' => 10 * 1024 * 1024,  // 10MB
-        'receipt' => 5 * 1024 * 1024     // 5MB
+        'image' => 100 * 1024 * 1024,      // 100MB
+        'video' => 10 * 1024 * 1024 * 1024, // 10GB
+        'document' => 500 * 1024 * 1024,   // 500MB
+        'receipt' => 50 * 1024 * 1024      // 50MB
     ];
     
     /**
