@@ -20,7 +20,9 @@ if (file_exists($lock_file)) {
 $error = '';
 $success = false;
 $admin_created = false;
-$smtp_tested = false;
+
+// Retrieve SMTP test status from session
+$smtp_tested = isset($_SESSION['smtp_tested']) ? $_SESSION['smtp_tested'] : false;
 
 // Handle step progression
 // Check if we're just moving to step 4 (no form fields submitted yet)
@@ -377,6 +379,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                         
                         if ($test_result) {
                             $smtp_tested = true;
+                            $_SESSION['smtp_tested'] = true; // Persist in session
                             // Don't auto-advance - show continue button instead
                             // $step remains 3 to show success message and continue button
                         } else {
@@ -481,6 +484,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                         
                         $admin_created = true;
                         $success = true;
+                        
+                        // Clear session data (do this last)
+                        session_unset();
+                        session_destroy();
                     }
                     
                 } catch (PDOException $e) {
