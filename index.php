@@ -16,7 +16,6 @@
 <body>
 <?php
 require_once 'security.php';
-require_once 'db_config.php';
 setSecurityHeaders();
 
 // Fetch dynamic branding content from database
@@ -26,7 +25,9 @@ $hero_title = 'Crash Hockey <br><span class="highlight">Development</span>';
 $hero_subtitle = 'Specialized on-ice and off-ice training protocols designed for competitive athletes seeking elite performance levels.';
 $training_programs = [];
 
+// Try to fetch dynamic content from database, fallback to defaults if database unavailable
 try {
+    require_once 'db_config.php';
     $conn = getDbConnection();
     
     // Fetch theme settings
@@ -53,7 +54,8 @@ try {
     $training_programs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
-    error_log("Index page branding error: " . $e->getMessage());
+    // Database unavailable - use default static content
+    error_log("Index page branding error (using defaults): " . $e->getMessage());
 }
 
 // Fallback default programs if none in database

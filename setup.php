@@ -21,7 +21,15 @@ $error = '';
 $success = false;
 $admin_created = false;
 $smtp_tested = false;
-$step = isset($_POST['step']) ? intval($_POST['step']) : 1;
+
+// Handle step progression
+// Check if we're just moving to step 4 (no form fields submitted yet)
+if (isset($_POST['step']) && $_POST['step'] == 4 && !isset($_POST['first_name'])) {
+    // Just displaying step 4 form, not processing it
+    $step = 4;
+} else {
+    $step = isset($_POST['step']) ? intval($_POST['step']) : 1;
+}
 
 // Step 1: Collect database credentials
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 1) {
