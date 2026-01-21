@@ -74,7 +74,8 @@ $allowed_pages = [
     'admin_feature_import' => 'views/admin_feature_import.php',
     'admin_database_tools' => 'views/admin_database_tools.php',
     'reports'             => 'views/reports.php',
-    'report_view'         => 'views/report_view.php'
+    'report_view'         => 'views/report_view.php',
+    'scheduled_reports'   => 'views/scheduled_reports.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
@@ -233,6 +234,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <nav class="nav-menu">
             <a href="?page=athletes" class="nav-link <?= $page=='athletes'?'active':'' ?>"><i class="fa-solid fa-users-gear"></i> Manage Roster</a>
             <a href="?page=reports" class="nav-link <?= $page=='reports'?'active':'' ?>"><i class="fa-solid fa-chart-bar"></i> Reports & Analytics</a>
+            <a href="?page=scheduled_reports" class="nav-link <?= $page=='scheduled_reports'?'active':'' ?>"><i class="fa-solid fa-calendar-alt"></i> Scheduled Reports</a>
             <a href="?page=library_workouts" class="nav-link <?= $page=='library_workouts'?'active':'' ?>"><i class="fa-solid fa-book"></i> Exercise Library</a>
             <a href="?page=library_nutrition" class="nav-link <?= $page=='library_nutrition'?'active':'' ?>"><i class="fa-solid fa-utensils"></i> Food Library</a>
             <a href="?page=session_templates" class="nav-link <?= $page=='session_templates'?'active':'' ?>"><i class="fa-solid fa-file-invoice"></i> Session Templates</a>
@@ -267,6 +269,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         <span class="nav-label">Accounting & Reports</span>
         <nav class="nav-menu">
             <a href="?page=reports" class="nav-link <?= $page=='reports'?'active':'' ?>"><i class="fa-solid fa-chart-bar"></i> Reports & Analytics</a>
+            <a href="?page=scheduled_reports" class="nav-link <?= $page=='scheduled_reports'?'active':'' ?>"><i class="fa-solid fa-calendar-alt"></i> Scheduled Reports</a>
             <a href="?page=billing_dashboard" class="nav-link <?= $page=='billing_dashboard'?'active':'' ?>"><i class="fa-solid fa-chart-pie"></i> Billing Dashboard</a>
             <a href="?page=accounting" class="nav-link <?= $page=='accounting'?'active':'' ?>"><i class="fa-solid fa-chart-line"></i> Accounting</a>
             <a href="?page=reports_income" class="nav-link <?= $page=='reports_income'?'active':'' ?>"><i class="fa-solid fa-file-invoice-dollar"></i> Income Reports</a>

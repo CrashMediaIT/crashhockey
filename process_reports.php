@@ -33,10 +33,14 @@ try {
         generateReport();
     } elseif ($action === 'delete') {
         deleteReport();
-    } elseif ($action === 'delete_schedule') {
+    } elseif ($action === 'delete_schedule' || $action === 'schedule_delete') {
         deleteSchedule();
-    } elseif ($action === 'toggle_schedule') {
+    } elseif ($action === 'toggle_schedule' || $action === 'schedule_toggle') {
         toggleSchedule();
+    } elseif ($action === 'schedule_create') {
+        createSchedule();
+    } elseif ($action === 'schedule_update') {
+        updateSchedule();
     } else {
         throw new Exception('Invalid action');
     }
@@ -597,11 +601,141 @@ function toggleSchedule() {
     global $pdo, $user_id;
     
     $schedule_id = $_POST['schedule_id'] ?? 0;
-    $status = $_POST['status'] ?? 1;
+    $status = $_POST['is_active'] ?? $_POST['status'] ?? 1;
     
     $stmt = $pdo->prepare("UPDATE report_schedules SET is_active = ? WHERE id = ? AND user_id = ?");
     $stmt->execute([$status, $schedule_id, $user_id]);
     
-    echo json_encode(['success' => true]);
+    echo json_encode(['success' => true, 'message' => 'Schedule updated successfully']);
+    exit;
+}
+
+function createSchedule() {
+    global $pdo, $user_id;
+    
+    $report_type = $_POST['report_type'] ?? '';
+    $frequency = $_POST['frequency'] ?? '';
+    $format = $_POST['format'] ?? 'pdf';
+    $email_recipients = $_POST['email_recipients'] ?? '';
+    $parameters = $_POST['parameters'] ?? '';
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    // Validate required fields
+    if (empty($report_type) || empty($frequency) || empty($email_recipients)) {
+        throw new Exception('Missing required fields');
+    }
+    
+    // Validate email format
+    $emails = array_map('trim', explode(',', $email_recipients));
+    foreach ($emails as $email) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Invalid email address: ' . $email);
+        }
+    }
+    
+    // Calculate next run time
+    $next_run = new DateTime();
+    switch ($frequency) {
+        case 'daily':
+            $next_run->modify('+1 day');
+            break;
+        case 'weekly':
+            $next_run->modify('+1 week');
+            break;
+        case 'monthly':
+            $next_run->modify('+1 month');
+            break;
+        default:
+            throw new Exception('Invalid frequency');
+    }
+    
+    $stmt = $pdo->prepare("
+        INSERT INTO report_schedules 
+        (user_id, report_type, parameters, frequency, format, email_recipients, next_run, is_active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    ");
+    
+    $stmt->execute([
+        $user_id,
+        $report_type,
+        $parameters,
+        $frequency,
+        $format,
+        $email_recipients,
+        $next_run->format('Y-m-d H:i:s'),
+        $is_active
+    ]);
+    
+    echo json_encode(['success' => true, 'message' => 'Schedule created successfully']);
+    exit;
+}
+
+function updateSchedule() {
+    global $pdo, $user_id;
+    
+    $schedule_id = $_POST['schedule_id'] ?? 0;
+    $report_type = $_POST['report_type'] ?? '';
+    $frequency = $_POST['frequency'] ?? '';
+    $format = $_POST['format'] ?? 'pdf';
+    $email_recipients = $_POST['email_recipients'] ?? '';
+    $parameters = $_POST['parameters'] ?? '';
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    // Validate required fields
+    if (empty($schedule_id) || empty($report_type) || empty($frequency) || empty($email_recipients)) {
+        throw new Exception('Missing required fields');
+    }
+    
+    // Validate email format
+    $emails = array_map('trim', explode(',', $email_recipients));
+    foreach ($emails as $email) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Invalid email address: ' . $email);
+        }
+    }
+    
+    // Verify ownership
+    $check = $pdo->prepare("SELECT id FROM report_schedules WHERE id = ? AND user_id = ?");
+    $check->execute([$schedule_id, $user_id]);
+    if (!$check->fetch()) {
+        throw new Exception('Schedule not found or access denied');
+    }
+    
+    // Calculate next run time if frequency changed
+    $next_run = new DateTime();
+    switch ($frequency) {
+        case 'daily':
+            $next_run->modify('+1 day');
+            break;
+        case 'weekly':
+            $next_run->modify('+1 week');
+            break;
+        case 'monthly':
+            $next_run->modify('+1 month');
+            break;
+        default:
+            throw new Exception('Invalid frequency');
+    }
+    
+    $stmt = $pdo->prepare("
+        UPDATE report_schedules 
+        SET report_type = ?, parameters = ?, frequency = ?, format = ?, 
+            email_recipients = ?, next_run = ?, is_active = ?
+        WHERE id = ? AND user_id = ?
+    ");
+    
+    $stmt->execute([
+        $report_type,
+        $parameters,
+        $frequency,
+        $format,
+        $email_recipients,
+        $next_run->format('Y-m-d H:i:s'),
+        $is_active,
+        $schedule_id,
+        $user_id
+    ]);
+    
+    echo json_encode(['success' => true, 'message' => 'Schedule updated successfully']);
     exit;
 }
