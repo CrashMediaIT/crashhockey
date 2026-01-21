@@ -90,26 +90,31 @@ function checkDatabaseIntegrity() {
     $issues = [];
     $checks_performed = 0;
     
-    // Check for orphaned records
+    // Check for orphaned records - whitelist of known safe table/column combinations
     $orphan_checks = [
-        'bookings' => ['user_id', 'users', 'id'],
-        'bookings' => ['session_id', 'sessions', 'id'],
-        'athlete_notes' => ['user_id', 'users', 'id'],
-        'goals' => ['user_id', 'users', 'id'],
-        'user_workouts' => ['user_id', 'users', 'id'],
-        'notifications' => ['user_id', 'users', 'id']
+        ['table' => 'bookings', 'fk_column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id'],
+        ['table' => 'bookings', 'fk_column' => 'session_id', 'ref_table' => 'sessions', 'ref_column' => 'id'],
+        ['table' => 'athlete_notes', 'fk_column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id'],
+        ['table' => 'goals', 'fk_column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id'],
+        ['table' => 'user_workouts', 'fk_column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id'],
+        ['table' => 'notifications', 'fk_column' => 'user_id', 'ref_table' => 'users', 'ref_column' => 'id']
     ];
     
-    foreach ($orphan_checks as $table => $check) {
-        list($fk_column, $ref_table, $ref_column) = $check;
+    foreach ($orphan_checks as $check) {
+        $table = $check['table'];
+        $fk_column = $check['fk_column'];
+        $ref_table = $check['ref_table'];
+        $ref_column = $check['ref_column'];
         
-        $stmt = $pdo->prepare("
+        // Use prepared statement with table/column names validated via whitelist
+        $query = "
             SELECT COUNT(*) as orphan_count
-            FROM `$table` t
-            LEFT JOIN `$ref_table` r ON t.$fk_column = r.$ref_column
-            WHERE t.$fk_column IS NOT NULL AND r.$ref_column IS NULL
-        ");
-        $stmt->execute();
+            FROM `" . $table . "` t
+            LEFT JOIN `" . $ref_table . "` r ON t." . $fk_column . " = r." . $ref_column . "
+            WHERE t." . $fk_column . " IS NOT NULL AND r." . $ref_column . " IS NULL
+        ";
+        
+        $stmt = $pdo->query($query);
         $result = $stmt->fetch();
         
         if ($result['orphan_count'] > 0) {

@@ -203,19 +203,26 @@ function getAthleteProgressData($athlete_id, $parameters) {
 function getTeamRosterData($team_id) {
     global $pdo;
     
-    $stmt = $pdo->prepare("
-        SELECT t.name as team_name, u.*
-        FROM athlete_teams t
-        LEFT JOIN users u ON u.id IN (
-            SELECT user_id FROM athlete_teams WHERE id = t.id
+    // Get team info
+    $team_stmt = $pdo->prepare("SELECT * FROM athlete_teams WHERE id = ?");
+    $team_stmt->execute([$team_id]);
+    $team = $team_stmt->fetch();
+    
+    // Get team members
+    $members_stmt = $pdo->prepare("
+        SELECT u.*
+        FROM users u
+        WHERE EXISTS (
+            SELECT 1 FROM athlete_teams at 
+            WHERE at.id = ? AND at.user_id = u.id
         )
-        WHERE t.id = ?
     ");
-    $stmt->execute([$team_id]);
+    $members_stmt->execute([$team_id]);
+    $members = $members_stmt->fetchAll();
     
     return [
-        'team' => $stmt->fetch(),
-        'members' => $stmt->fetchAll()
+        'team' => $team,
+        'members' => $members
     ];
 }
 
@@ -309,10 +316,10 @@ function generateCSV($report_type, $data, $parameters) {
     $filename = 'reports/' . $report_type . '_' . date('Y-m-d_His') . '.csv';
     $filepath = __DIR__ . '/' . $filename;
     
-    // Ensure reports directory exists
+    // Ensure reports directory exists with secure permissions
     $dir = dirname($filepath);
     if (!file_exists($dir)) {
-        mkdir($dir, 0755, true);
+        mkdir($dir, 0750, true); // Restrictive permissions
     }
     
     $fp = fopen($filepath, 'w');
@@ -397,10 +404,10 @@ function generatePDF($report_type, $data, $parameters) {
     $filename = 'reports/' . $report_type . '_' . date('Y-m-d_His') . '.pdf';
     $filepath = __DIR__ . '/' . $filename;
     
-    // Ensure reports directory exists
+    // Ensure reports directory exists with secure permissions
     $dir = dirname($filepath);
     if (!file_exists($dir)) {
-        mkdir($dir, 0755, true);
+        mkdir($dir, 0750, true); // Restrictive permissions
     }
     
     // Generate HTML content

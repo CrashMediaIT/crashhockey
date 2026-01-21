@@ -354,24 +354,43 @@ function notifyAdmins($count, $vulnerabilities, $scan_id) {
     $summary = generateSummary($vulnerabilities);
     
     foreach ($admins as $admin) {
-        // Send email
+        // Prepare data for custom email type
+        $data = [
+            'name' => $admin['first_name'] . ' ' . $admin['last_name'],
+            'vulnerability_count' => $count,
+            'critical' => $summary['critical'],
+            'high' => $summary['high'],
+            'medium' => $summary['medium'],
+            'low' => $summary['low'],
+            'vulnerabilities' => array_slice($vulnerabilities, 0, 5),
+            'scan_id' => $scan_id,
+            'app_url' => getenv('APP_URL') ?: 'https://yourdomain.com'
+        ];
+        
+        // Use a custom email template for security scans
+        // Note: You'll need to add this template type to mailer.php
+        // For now, send a simple email directly
         $subject = "Security Alert: $count Vulnerabilities Found";
         
         $message = "
-        <h2 style='color: #ff4444;'>Security Vulnerability Scan Results</h2>
-        
-        <p>The weekly security scan has detected <strong>$count vulnerabilities</strong> in the Crash Hockey platform.</p>
-        
-        <h3>Summary by Severity:</h3>
-        <ul>
-            <li><strong>Critical:</strong> {$summary['critical']}</li>
-            <li><strong>High:</strong> {$summary['high']}</li>
-            <li><strong>Medium:</strong> {$summary['medium']}</li>
-            <li><strong>Low:</strong> {$summary['low']}</li>
-        </ul>
-        
-        <h3>Top Vulnerabilities:</h3>
-        <ul>";
+        <div style='font-family: Arial, sans-serif; background: #06080b; color: #fff; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;'>
+            <h2 style='color: #ff4444; margin-top: 0;'>Security Vulnerability Scan Results</h2>
+            
+            <p style='color: #ccc;'>The weekly security scan has detected <strong>$count vulnerabilities</strong> in the Crash Hockey platform.</p>
+            
+            <div style='background: #1e293b; padding: 20px; border-radius: 6px; margin: 20px 0;'>
+                <h3 style='color: #fff; margin-top: 0;'>Summary by Severity:</h3>
+                <ul style='color: #ccc;'>
+                    <li><strong>Critical:</strong> {$summary['critical']}</li>
+                    <li><strong>High:</strong> {$summary['high']}</li>
+                    <li><strong>Medium:</strong> {$summary['medium']}</li>
+                    <li><strong>Low:</strong> {$summary['low']}</li>
+                </ul>
+            </div>
+            
+            <div style='background: #1e293b; padding: 20px; border-radius: 6px; margin: 20px 0;'>
+                <h3 style='color: #fff; margin-top: 0;'>Top Vulnerabilities:</h3>
+                <ul style='color: #ccc;'>";
         
         $top_vulns = array_slice($vulnerabilities, 0, 5);
         foreach ($top_vulns as $vuln) {
@@ -379,14 +398,38 @@ function notifyAdmins($count, $vulnerabilities, $scan_id) {
         }
         
         $message .= "
-        </ul>
+                </ul>
+            </div>
+            
+            <p style='color: #ccc;'>Please review the full scan results in the admin dashboard.</p>
+            
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='{$data['app_url']}/dashboard.php?page=security_scans&scan_id=$scan_id' 
+                   style='background: #7000a4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700;'>
+                   View Full Scan Results
+                </a>
+            </div>
+            
+            <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; text-align: center; color: #555; font-size: 11px;'>
+                &copy; " . date('Y') . " Crash Hockey Performance. All rights reserved.
+            </div>
+        </div>";
         
-        <p>Please review the full scan results in the admin dashboard.</p>
-        
-        <p><a href='" . getenv('APP_URL') . "/dashboard.php?page=security_scans&scan_id=$scan_id' style='background: #7000a4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;'>View Full Scan Results</a></p>
-        ";
-        
-        sendEmail($admin['email'], $subject, $message);
+        // Use custom email
+        try {
+            $smtp_config = [
+                'smtp_host' => getenv('SMTP_HOST') ?: 'localhost',
+                'smtp_port' => getenv('SMTP_PORT') ?: 25,
+                'smtp_user' => getenv('SMTP_USER') ?: '',
+                'smtp_pass' => getenv('SMTP_PASS') ?: '',
+                'smtp_encryption' => getenv('SMTP_ENCRYPTION') ?: 'none'
+            ];
+            
+            $mailer = new SmtpMailer();
+            $mailer->send($admin['email'], $subject, $message, $smtp_config);
+        } catch (Exception $e) {
+            echo "Failed to send email to {$admin['email']}: " . $e->getMessage() . "\n";
+        }
         
         // Create in-app notification
         $notif_stmt = $pdo->prepare("

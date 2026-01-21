@@ -15,7 +15,7 @@ if ($user_role !== 'admin') {
 // Get all locations
 $locations = $pdo->query("
     SELECT l.*, 
-           (SELECT COUNT(*) FROM sessions WHERE location_id = l.id) as session_count
+           (SELECT COUNT(*) FROM sessions WHERE arena = l.name) as session_count
     FROM locations l
     ORDER BY l.city, l.name
 ")->fetchAll();
