@@ -745,24 +745,6 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
     INDEX `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Database backup history
-CREATE TABLE IF NOT EXISTS `backup_history` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `backup_job_id` INT DEFAULT NULL,
-    `filename` VARCHAR(255) NOT NULL,
-    `file_size` BIGINT DEFAULT NULL,
-    `destination` VARCHAR(255) DEFAULT NULL,
-    `backup_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `status` ENUM('success', 'failed', 'partial') DEFAULT 'success',
-    `error_message` TEXT DEFAULT NULL,
-    `duration_seconds` INT DEFAULT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`backup_job_id`) REFERENCES `backup_jobs`(`id`) ON DELETE SET NULL,
-    INDEX `idx_job` (`backup_job_id`),
-    INDEX `idx_date` (`backup_date`),
-    INDEX `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Scheduled backup jobs
 CREATE TABLE IF NOT EXISTS `backup_jobs` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -785,6 +767,25 @@ CREATE TABLE IF NOT EXISTS `backup_jobs` (
     FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE CASCADE,
     INDEX `idx_status` (`status`),
     INDEX `idx_next_backup` (`next_backup`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Database backup history
+CREATE TABLE IF NOT EXISTS `backup_history` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `backup_job_id` INT DEFAULT NULL,
+    `filename` VARCHAR(255) NOT NULL,
+    `file_size` BIGINT DEFAULT NULL,
+    `destination` VARCHAR(255) DEFAULT NULL,
+    `backup_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `status` ENUM('success', 'failed', 'partial') DEFAULT 'success',
+    `error_message` TEXT DEFAULT NULL,
+    `duration_seconds` INT DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`backup_job_id`) REFERENCES `backup_jobs`(`id`) ON DELETE SET NULL,
+    INDEX `idx_job` (`backup_job_id`),
+    INDEX `idx_date` (`backup_date`),
+    INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Session bookings (alias/duplicate of session_bookings for compatibility)
