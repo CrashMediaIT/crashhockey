@@ -58,41 +58,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($step == 2) {
         // Admin User Creation
-        require_once __DIR__ . '/db_config.php';
-        
-        $email = trim($_POST['admin_email']);
-        $password = $_POST['admin_password'];
-        $confirm = $_POST['admin_password_confirm'];
-        $first_name = trim($_POST['first_name']);
-        $last_name = trim($_POST['last_name']);
-        
-        if ($password !== $confirm) {
-            $error = "Passwords do not match";
+        // Recreate PDO connection from session credentials
+        if (!isset($_SESSION['db_credentials'])) {
+            $error = "Database credentials not found. Please restart setup.";
         } else {
+            $db_creds = $_SESSION['db_credentials'];
+            
             try {
-                $hashed = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (email, password, first_name, last_name, role, is_verified) VALUES (?, ?, ?, ?, 'admin', 1)");
-                $stmt->execute([$email, $hashed, $first_name, $last_name]);
+                $pdo = new PDO("mysql:host={$db_creds['host']};dbname={$db_creds['name']};charset=utf8mb4", 
+                              $db_creds['user'], $db_creds['pass']);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                $_SESSION['setup']['admin'] = true;
-                header("Location: setup.php?step=3");
-                exit();
+                $email = trim($_POST['admin_email']);
+                $password = $_POST['admin_password'];
+                $confirm = $_POST['admin_password_confirm'];
+                $first_name = trim($_POST['first_name']);
+                $last_name = trim($_POST['last_name']);
+                
+                if ($password !== $confirm) {
+                    $error = "Passwords do not match";
+                } else {
+                    $hashed = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("INSERT INTO users (email, password, first_name, last_name, role, is_verified) VALUES (?, ?, ?, ?, 'admin', 1)");
+                    $stmt->execute([$email, $hashed, $first_name, $last_name]);
+                    
+                    $_SESSION['setup']['admin'] = true;
+                    header("Location: setup.php?step=3");
+                    exit();
+                }
             } catch (PDOException $e) {
                 $error = "Failed to create admin user: " . $e->getMessage();
             }
         }
     } elseif ($step == 3) {
         // SMTP Configuration
-        $smtp_host = trim($_POST['smtp_host']);
-        $smtp_port = trim($_POST['smtp_port']);
-        $smtp_user = trim($_POST['smtp_user']);
-        $smtp_pass = $_POST['smtp_pass'];
-        $smtp_from = trim($_POST['smtp_from']);
-        
-        // Save SMTP settings to database or config file
-        require_once __DIR__ . '/db_config.php';
-        
-        try {
+        // Recreate PDO connection from session credentials
+        if (!isset($_SESSION['db_credentials'])) {
+            $error = "Database credentials not found. Please restart setup.";
+        } else {
+            $db_creds = $_SESSION['db_credentials'];
+            
+            try {
+                $pdo = new PDO("mysql:host={$db_creds['host']};dbname={$db_creds['name']};charset=utf8mb4", 
+                              $db_creds['user'], $db_creds['pass']);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                $smtp_host = trim($_POST['smtp_host']);
+                $smtp_port = trim($_POST['smtp_port']);
+                $smtp_user = trim($_POST['smtp_user']);
+                $smtp_pass = $_POST['smtp_pass'];
+                $smtp_from = trim($_POST['smtp_from']);
             $settings = [
                 ['smtp_host', $smtp_host],
                 ['smtp_port', $smtp_port],
@@ -108,12 +123,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Test SMTP connection (optional)
             // ... smtp test code ...
-            
-            $_SESSION['setup']['smtp'] = true;
-            header("Location: setup.php?step=4");
-            exit();
-        } catch (PDOException $e) {
-            $error = "Failed to save SMTP settings: " . $e->getMessage();
+                
+                $_SESSION['setup']['smtp'] = true;
+                header("Location: setup.php?step=4");
+                exit();
+            } catch (PDOException $e) {
+                $error = "Failed to save SMTP settings: " . $e->getMessage();
+            }
         }
     } elseif ($step == 4) {
         // Finalize Setup
