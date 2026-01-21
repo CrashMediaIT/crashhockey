@@ -88,15 +88,15 @@
                     <div class="color-picker-item">
                         <label>Primary Color</label>
                         <div class="color-input-group">
-                            <input type="color" value="#ff4d00">
-                            <input type="text" class="form-input" value="#ff4d00">
+                            <input type="color" value="#6B46C1">
+                            <input type="text" class="form-input" value="#6B46C1">
                         </div>
                     </div>
                     <div class="color-picker-item">
                         <label>Accent Color</label>
                         <div class="color-input-group">
-                            <input type="color" value="#ff9d00">
-                            <input type="text" class="form-input" value="#ff9d00">
+                            <input type="color" value="#8B5CF6">
+                            <input type="text" class="form-input" value="#8B5CF6">
                         </div>
                     </div>
                     <div class="color-picker-item">

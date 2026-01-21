@@ -137,7 +137,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #ff4d00; --bg: #06080b; --card-bg: #0d1116; --border: #1e293b; }
+        :root { 
+            --primary: #6B46C1; 
+            --primary-hover: #7C3AED;
+            --bg: #0A0A0F; 
+            --card-bg: #16161F; 
+            --border: #2D2D3F; 
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .setup-container { max-width: 600px; width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 40px; }
@@ -153,8 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #cbd5e1; }
         .form-group input, .form-group select { width: 100%; height: 45px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 15px; color: #fff; font-size: 14px; font-family: 'Inter', sans-serif; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--neon); }
-        .btn-primary { width: 100%; height: 45px; background: var(--neon); color: #000; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
-        .btn-primary:hover { background: #ff6620; }
+        .btn-primary { width: 100%; height: 45px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+        .btn-primary:hover { background: var(--primary-hover); }
         .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
         .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; }
         .alert-success { background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; color: #00ff88; }

@@ -87,7 +87,19 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ff4d00; --bg: #06080b; --sidebar: #020305; --border: #1e293b; --text: #94a3b8; }
+        :root { 
+            --primary: #6B46C1; 
+            --primary-hover: #7C3AED; 
+            --primary-light: #8B5CF6;
+            --bg: #0A0A0F; 
+            --bg-secondary: #13131A;
+            --sidebar: #0D0D14; 
+            --border: #2D2D3F; 
+            --border-light: #3A3A4F;
+            --text: #A8A8B8; 
+            --text-muted: #6B6B7B;
+            --card-bg: #16161F;
+        }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: #fff; display: flex; height: 100vh; overflow: hidden; }
         
@@ -103,11 +115,11 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         .nav-menu { list-style: none; padding: 0; margin: 0; }
         .nav-link { display: flex; align-items: center; gap: 14px; padding: 10px 15px; color: var(--text); text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 600; transition: 0.2s; margin-bottom: 2px; cursor: pointer; }
         .nav-link i { width: 18px; text-align: center; }
-        .nav-link:hover, .nav-link.active { background: rgba(255, 77, 0, 0.1); color: var(--primary); }
+        .nav-link:hover, .nav-link.active { background: rgba(107, 70, 193, 0.1); color: var(--primary-light); }
         
         /* Collapsible Submenus */
         .nav-parent { display: flex; align-items: center; gap: 14px; padding: 10px 15px; color: var(--text); border-radius: 8px; font-size: 13px; font-weight: 600; transition: 0.2s; margin-bottom: 2px; cursor: pointer; justify-content: space-between; }
-        .nav-parent:hover { background: rgba(255, 77, 0, 0.1); color: var(--primary); }
+        .nav-parent:hover { background: rgba(107, 70, 193, 0.1); color: var(--primary-light); }
         .nav-parent i.icon { width: 18px; text-align: center; }
         .nav-parent i.chevron { font-size: 10px; transition: transform 0.2s; }
         .nav-parent.expanded i.chevron { transform: rotate(90deg); }
@@ -130,7 +142,14 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         
         /* Sidebar Footer */
         .sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
-        .avatar { width: 35px; height: 35px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        .avatar { width: 35px; height: 35px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        
+        /* Custom Scrollbar */
+        .sidebar::-webkit-scrollbar, .content-area::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track, .content-area::-webkit-scrollbar-track { background: var(--bg); }
+        .sidebar::-webkit-scrollbar-thumb, .content-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover, .content-area::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+        * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
     </style>
 </head>
 <body>
