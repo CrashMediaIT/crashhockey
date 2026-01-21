@@ -1,0 +1,45 @@
+{
+  "name": "Enhanced User System",
+  "version": "2.0.0",
+  "requires_version": "1.0.0",
+  "requires_validation": true,
+  
+  "database_migrations": [
+    {
+      "type": "add_column",
+      "table": "users",
+      "column_definition": "`subscription_tier` VARCHAR(50) DEFAULT 'free' COMMENT 'User subscription level'"
+    },
+    {
+      "type": "add_column",
+      "table": "users",
+      "column_definition": "`subscription_expires` TIMESTAMP NULL DEFAULT NULL"
+    },
+    {
+      "type": "add_column",
+      "table": "users",
+      "column_definition": "`last_login` TIMESTAMP NULL DEFAULT NULL"
+    }
+  ],
+  
+  "files": {
+    "create": [
+      "views/admin_user_subscriptions.php"
+    ]
+  },
+  
+  "directories": [
+    "uploads/subscription_receipts/"
+  ],
+  
+  "navigation": {
+    "add": [
+      {
+        "label": "User Subscriptions",
+        "url": "?page=admin_user_subscriptions",
+        "view": "views/admin_user_subscriptions.php",
+        "role": "admin"
+      }
+    ]
+  }
+}
