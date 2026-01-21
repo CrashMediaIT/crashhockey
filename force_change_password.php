@@ -7,6 +7,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Optional: Double check if they actually need to be here
 // (You could re-query the DB, but session logic from login.php is usually sufficient)
 ?>
@@ -58,6 +63,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         </p>
 
         <form action="process_profile_update.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <input type="hidden" name="action" value="force_password_reset">
             <input type="hidden" name="user_id" value="<?php echo $_SESSION['user_id']; ?>">
             

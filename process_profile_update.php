@@ -1,8 +1,14 @@
 <?php
 session_start();
 require 'db_config.php';
+require 'security.php';
 
-// 1. GATEKEEPER: Ensure user is logged in
+// CSRF protection
+if (!isset($_POST['csrf_token']) || !csrfTokenValidate($_POST['csrf_token'])) {
+    die("CSRF token validation failed");
+}
+
+// Ensure user is logged in
 if (!isset($_SESSION['logged_in'])) { 
     header("Location: login.php"); 
     exit(); 
@@ -10,127 +16,89 @@ if (!isset($_SESSION['logged_in'])) {
 
 $current_user_id = $_SESSION['user_id'];
 $role = $_SESSION['user_role'];
-$action = $_POST['action'] ?? '';
 
-// =========================================================
-// ACTION 1: UPLOAD PROFILE PICTURE
-// =========================================================
-if ($action == 'upload_avatar') {
-    $target_id = $_POST['user_id']; 
+try {
+    // Update basic information
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
+    $email = trim($_POST['email']);
     
-    // Only allow update if it's ME or if I am Admin/Coach
-    if ($target_id != $current_user_id && $role != 'admin' && $role != 'coach') {
-        die("Access Denied.");
-    }
-
-    if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] == 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-        $filename = $_FILES['profile_pic']['name'];
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $stmt = $pdo->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?");
+    $stmt->execute([$first_name, $last_name, $email, $current_user_id]);
+    
+    // Update athlete-specific fields
+    if ($role === 'athlete') {
+        $position = $_POST['position'] ?? null;
+        $birth_date = $_POST['birth_date'] ?? null;
+        $primary_arena = trim($_POST['primary_arena'] ?? '');
+        $weight = $_POST['weight'] ? intval($_POST['weight']) : null;
+        $height = $_POST['height'] ? intval($_POST['height']) : null;
+        $shooting_hand = $_POST['shooting_hand'] ?? null;
+        $catching_hand = $_POST['catching_hand'] ?? null;
         
-        if (in_array($ext, $allowed)) {
-            if (!is_dir('uploads')) { mkdir('uploads'); }
-            $new_name = "uploads/avatar_" . $target_id . "_" . time() . "." . $ext;
-            
-            if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $new_name)) {
-                $pdo->prepare("UPDATE users SET profile_pic = ? WHERE id = ?")->execute([$new_name, $target_id]);
-                
-                // Redirect logic
-                if ($target_id == $current_user_id) {
-                    header("Location: dashboard.php?page=profile&msg=avatar_updated");
-                } else {
-                    header("Location: dashboard.php?page=athlete_detail&id=$target_id&msg=avatar_updated");
-                }
+        // Validate ENUM values against database schema
+        $valid_positions = ['forward', 'defense', 'goalie', ''];
+        $valid_shooting_hands = ['left', 'right', 'ambidextrous', ''];
+        $valid_catching_hands = ['regular', 'full_right', ''];
+        
+        if (!in_array($position, $valid_positions, true)) {
+            $position = null;
+        }
+        if (!in_array($shooting_hand, $valid_shooting_hands, true)) {
+            $shooting_hand = null;
+        }
+        if (!in_array($catching_hand, $valid_catching_hands, true)) {
+            $catching_hand = null;
+        }
+        
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET position = ?, birth_date = ?, primary_arena = ?, 
+                weight = ?, height = ?, shooting_hand = ?, catching_hand = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $position ?: null, $birth_date, $primary_arena, 
+            $weight, $height, $shooting_hand ?: null, $catching_hand ?: null,
+            $current_user_id
+        ]);
+    }
+    
+    // Update email notifications
+    $email_notifications = isset($_POST['email_notifications']) ? 1 : 0;
+    $stmt = $pdo->prepare("UPDATE users SET email_notifications = ? WHERE id = ?");
+    $stmt->execute([$email_notifications, $current_user_id]);
+    
+    // Handle password change if provided
+    if (!empty($_POST['current_password']) && !empty($_POST['new_password'])) {
+        // Verify current password
+        $user_stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+        $user_stmt->execute([$current_user_id]);
+        $user = $user_stmt->fetch();
+        
+        if (password_verify($_POST['current_password'], $user['password'])) {
+            if ($_POST['new_password'] === $_POST['confirm_password']) {
+                $new_hash = password_hash($_POST['new_password'], PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+                $stmt->execute([$new_hash, $current_user_id]);
+                header("Location: dashboard.php?page=profile&msg=password_updated");
+                exit();
+            } else {
+                header("Location: dashboard.php?page=profile&error=passwords_dont_match");
                 exit();
             }
+        } else {
+            header("Location: dashboard.php?page=profile&error=incorrect_password");
+            exit();
         }
     }
-    header("Location: dashboard.php?page=profile&error=upload_error");
+    
+    header("Location: dashboard.php?page=profile&msg=updated");
+    exit();
+    
+} catch (PDOException $e) {
+    error_log("Profile update error: " . $e->getMessage());
+    header("Location: dashboard.php?page=profile&error=update_failed");
     exit();
 }
-
-// =========================================================
-// ACTION 2: UPDATE BASIC INFO (Email, Position, Arena)
-// =========================================================
-if ($action == 'update_info') {
-    $email = trim($_POST['email']);
-    $pos   = $_POST['position'];
-    $arena = trim($_POST['primary_arena']);
-    
-    try {
-        $stmt = $pdo->prepare("UPDATE users SET email = ?, position = ?, primary_arena = ? WHERE id = ?");
-        $stmt->execute([$email, $pos, $arena, $current_user_id]);
-        header("Location: dashboard.php?page=profile&msg=updated");
-        exit();
-    } catch (PDOException $e) {
-        die("Error updating profile.");
-    }
-}
-
-// =========================================================
-// ACTION 3: STANDARD PASSWORD CHANGE (Voluntary)
-// =========================================================
-if ($action == 'change_password') {
-    $raw_pass = $_POST['password'];
-    $hash = password_hash($raw_pass, PASSWORD_BCRYPT);
-    
-    try {
-        $pdo->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $current_user_id]);
-        header("Location: dashboard.php?page=profile&msg=pass_updated");
-        exit();
-    } catch (PDOException $e) { die("Error."); }
-}
-
-// =========================================================
-// ACTION 4: ADD TEAM HISTORY
-// =========================================================
-if ($action == 'add_team') {
-    $name  = trim($_POST['team_name']);
-    $year  = $_POST['season_year'];
-    $type  = $_POST['season_type'];
-    $season_display = $type . " " . $year; 
-
-    try {
-        // Reset current flag
-        $pdo->prepare("UPDATE athlete_teams SET is_current = 0 WHERE user_id = ?")->execute([$current_user_id]);
-        // Insert new
-        $stmt = $pdo->prepare("INSERT INTO athlete_teams (user_id, team_name, season_year, season_type, season, is_current) VALUES (?, ?, ?, ?, ?, 1)");
-        $stmt->execute([$current_user_id, $name, $year, $type, $season_display]);
-        
-        header("Location: dashboard.php?page=profile&msg=team_added");
-        exit();
-    } catch (PDOException $e) { die("Error."); }
-}
-
-// =========================================================
-// ACTION 5: FORCE PASSWORD RESET (Mandatory First Login)
-// =========================================================
-if ($action == 'force_password_reset') {
-    $uid  = $_POST['user_id'];
-    $pass = $_POST['new_password'];
-    
-    // Security: Ensure the user editing is the logged in user
-    if ($uid != $current_user_id) { 
-        die("Unauthorized access."); 
-    }
-    
-    $hash = password_hash($pass, PASSWORD_BCRYPT);
-    
-    try {
-        // 1. Update the password
-        // 2. Set force_pass_change to 0 (unlocks the account)
-        $stmt = $pdo->prepare("UPDATE users SET password = ?, force_pass_change = 0 WHERE id = ?");
-        $stmt->execute([$hash, $uid]);
-        
-        // Redirect to dashboard now that they are unlocked
-        header("Location: dashboard.php");
-        exit();
-    } catch (PDOException $e) {
-        die("Error processing reset: " . $e->getMessage());
-    }
-}
-
-// Fallback
-header("Location: dashboard.php");
-exit();
 ?>

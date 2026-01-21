@@ -1,10 +1,15 @@
 <?php
 session_start();
+require 'security.php';
+
 // If already logged in, redirect to dashboard
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     header("Location: dashboard.php");
     exit();
 }
+
+// Set security headers
+setSecurityHeaders();
 ?>
 
 <!DOCTYPE html>
@@ -15,6 +20,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     
     <link rel="icon" type="image/png" href="https://images.crashmedia.ca/images/2026/01/18/logo.png">
     
+    <link rel="stylesheet" href="css/theme-variables.php">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -170,6 +176,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             <?php endif; ?>
 
             <form action="process_register.php" method="POST">
+                <?= csrfTokenInput() ?>
                 
                 <div class="form-row">
                     <div class="input-box">
@@ -187,18 +194,30 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
                     <input type="email" name="email" required placeholder="name@example.com">
                 </div>
 
-                <div class="form-row">
-                    <div class="input-box">
-                        <label>Position</label>
-                        <select name="position" required>
-                            <option value="Forward">Forward</option>
-                            <option value="Defense">Defense</option>
-                            <option value="Goalie">Goalie</option>
-                        </select>
-                    </div>
-                    <div class="input-box">
-                        <label>Date of Birth</label>
-                        <input type="date" name="birth_date" required>
+                <div class="input-box">
+                    <label>Account Type</label>
+                    <select name="account_type" id="account_type" required onchange="toggleAthleteFields()">
+                        <option value="athlete">Athlete</option>
+                        <option value="parent">Parent/Manager</option>
+                    </select>
+                    <small style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">Parents can manage multiple athletes</small>
+                </div>
+
+                <div id="athlete_fields">
+                    <div class="form-row">
+                        <div class="input-box">
+                            <label>Position</label>
+                            <select name="position">
+                                <option value="">Select Position</option>
+                                <option value="Forward">Forward</option>
+                                <option value="Defense">Defense</option>
+                                <option value="Goalie">Goalie</option>
+                            </select>
+                        </div>
+                        <div class="input-box">
+                            <label>Date of Birth</label>
+                            <input type="date" name="birth_date">
+                        </div>
                     </div>
                 </div>
 
@@ -217,6 +236,28 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 
         </div>
     </div>
+
+    <script>
+        function toggleAthleteFields() {
+            const accountType = document.getElementById('account_type').value;
+            const athleteFields = document.getElementById('athlete_fields');
+            
+            if (accountType === 'parent') {
+                athleteFields.style.display = 'none';
+                // Make athlete fields not required
+                document.querySelector('[name="position"]').removeAttribute('required');
+                document.querySelector('[name="birth_date"]').removeAttribute('required');
+            } else {
+                athleteFields.style.display = 'block';
+                // Make athlete fields required again
+                document.querySelector('[name="position"]').setAttribute('required', 'required');
+                document.querySelector('[name="birth_date"]').setAttribute('required', 'required');
+            }
+        }
+        
+        // Initialize on page load
+        toggleAthleteFields();
+    </script>
 
 </body>
 </html>

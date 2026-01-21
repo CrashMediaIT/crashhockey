@@ -3,10 +3,20 @@
 session_start();
 require 'db_config.php';
 
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $msg = "";
 $msg_type = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $msg = "Security validation failed. Please try again.";
+        $msg_type = "error";
+    } else {
     $email = trim($_POST['email']);
     $code  = trim($_POST['code']);
     
@@ -14,15 +24,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND verification_code = ?");
     $stmt->execute([$email, $code]);
     
-    if ($stmt->rowCount() > 0) {
-        // Success: Mark Verified & Clear Code
-        $pdo->prepare("UPDATE users SET is_verified = 1, verification_code = NULL WHERE email = ?")->execute([$email]);
-        $_SESSION['success_msg'] = "Account verified successfully! You can now login.";
-        header("Location: login.php");
-        exit();
-    } else {
-        $msg = "Invalid verification code or email.";
-        $msg_type = "error";
+        if ($stmt->rowCount() > 0) {
+            // Success: Mark Verified & Clear Code
+            $pdo->prepare("UPDATE users SET is_verified = 1, verification_code = NULL WHERE email = ?")->execute([$email]);
+            $_SESSION['success_msg'] = "Account verified successfully! You can now login.";
+            header("Location: login.php");
+            exit();
+        } else {
+            $msg = "Invalid verification code or email.";
+            $msg_type = "error";
+        }
     }
 }
 ?>
@@ -47,6 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php endif; ?>
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <input type="email" name="email" placeholder="Confirm your Email" required style="width:100%; padding:12px; margin-bottom:10px; background:#06080b; border:1px solid var(--border); color:#fff; border-radius: 4px;">
             
             <input type="text" name="code" placeholder="123456" maxlength="6" required style="width:100%; padding:15px; margin-bottom:20px; background:#06080b; border:1px solid var(--neon); color:#fff; text-align:center; letter-spacing:8px; font-size:20px; font-weight: 800; border-radius: 4px;">

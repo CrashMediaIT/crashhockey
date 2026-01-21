@@ -49,6 +49,23 @@ $db   = $_ENV['DB_NAME'] ?? 'crashhockey';
 $user = $_ENV['DB_USER'] ?? 'root';
 $pass = $_ENV['DB_PASS'] ?? '';
 
+// 4. DECRYPT PASSWORD IF ENCRYPTED
+if (isset($_ENV['DB_PASS_ENCRYPTED']) && isset($_ENV['ENCRYPTION_KEY_HASH'])) {
+    try {
+        $encrypted_data = $_ENV['DB_PASS_ENCRYPTED'];
+        $key_hash = hex2bin($_ENV['ENCRYPTION_KEY_HASH']);
+        
+        $parts = explode('::', base64_decode($encrypted_data), 2);
+        if (count($parts) === 2) {
+            $iv = $parts[0];
+            $encrypted = $parts[1];
+            $pass = openssl_decrypt($encrypted, 'AES-256-CBC', $key_hash, 0, $iv);
+        }
+    } catch (Exception $e) {
+        // Fall back to plain password if decryption fails
+    }
+}
+
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

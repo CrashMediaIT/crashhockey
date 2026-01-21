@@ -10,14 +10,89 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="css/theme-variables.php">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<?php
+require_once 'security.php';
+setSecurityHeaders();
+
+// Fetch dynamic branding content from database
+$logo_url = 'https://images.crashmedia.ca/images/2026/01/18/logo.png';
+$hero_image_url = '';
+$hero_title = 'Crash Hockey <br><span class="highlight">Development</span>';
+$hero_subtitle = 'Specialized on-ice and off-ice training protocols designed for competitive athletes seeking elite performance levels.';
+$training_programs = [];
+
+// Try to fetch dynamic content from database, fallback to defaults if database unavailable
+try {
+    require_once 'db_config.php';
+    $conn = getDbConnection();
+    
+    // Fetch theme settings
+    $stmt = $conn->prepare("SELECT setting_name, setting_value FROM theme_settings WHERE setting_name IN ('logo_url', 'hero_image_url', 'hero_title', 'hero_subtitle')");
+    $stmt->execute();
+    $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+    if (!empty($settings['logo_url'])) {
+        $logo_url = $settings['logo_url'];
+    }
+    if (!empty($settings['hero_image_url'])) {
+        $hero_image_url = $settings['hero_image_url'];
+    }
+    if (!empty($settings['hero_title'])) {
+        $hero_title = $settings['hero_title'];
+    }
+    if (!empty($settings['hero_subtitle'])) {
+        $hero_subtitle = $settings['hero_subtitle'];
+    }
+    
+    // Fetch training programs
+    $stmt = $conn->prepare("SELECT title, description, tags, image_url FROM training_programs ORDER BY display_order ASC");
+    $stmt->execute();
+    $training_programs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+} catch (Exception $e) {
+    // Database unavailable - use default static content
+    error_log("Index page branding error (using defaults): " . $e->getMessage());
+}
+
+// Fallback default programs if none in database
+if (empty($training_programs)) {
+    $training_programs = [
+        [
+            'title' => 'Player Dev',
+            'description' => 'Forwards & Defense: Explosive edgework and shot mechanics.',
+            'tags' => 'Power Skating,Shooting',
+            'image_url' => 'https://images.unsplash.com/photo-1580748141549-71748ddf0bdc?q=80&w=800'
+        ],
+        [
+            'title' => 'Goalie Elite',
+            'description' => 'Crease management, angle control, and rebound psychology.',
+            'tags' => 'Positioning,Tracking',
+            'image_url' => 'https://images.unsplash.com/photo-1543326727-b5bf833b6c7a?q=80&w=800'
+        ],
+        [
+            'title' => 'Conditioning',
+            'description' => 'Dryland training for endurance and explosive 60-minute power.',
+            'tags' => 'Strength,Power',
+            'image_url' => 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800'
+        ],
+        [
+            'title' => 'Nutrition',
+            'description' => 'Meal planning to fuel muscle growth and accelerate recovery.',
+            'tags' => 'Protein,Recovery',
+            'image_url' => 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=800'
+        ]
+    ];
+}
+?>
 
     <header>
         <nav class="container nav-flex">
             <div class="logo-area" style="display: flex; align-items: center; gap: 15px;">
-                <img src="https://images.crashmedia.ca/images/2026/01/18/logo.png" alt="Crash Hockey Logo" style="height: 40px; width: auto;">
+                <img src="<?php echo htmlspecialchars($logo_url); ?>" alt="Crash Hockey Logo" style="height: 40px; width: auto;">
                 
                 <div>
                     <div class="logo-text">CRASH<span>HOCKEY</span></div>
@@ -26,13 +101,14 @@
             
             <div class="nav-menu">
                 <a href="#programs">Programs</a>
+                <a href="public_sessions.php">Sessions</a>
                 <a href="#standards">Standards</a>
                 <a href="login.php" class="nav-btn">Athlete Login</a>
             </div>
         </nav>
     </header>
 
-    <section class="hero">
+    <section class="hero"<?php if (!empty($hero_image_url)) echo ' style="background-image: url(\'' . htmlspecialchars($hero_image_url) . '\');"'; ?>>
         <div class="scanline"></div>
         <div class="container hero-grid">
             <div class="hero-content">
@@ -43,8 +119,8 @@
                     </div>
                 </a>
 
-                <h1>Crash Hockey <br><span class="highlight">Development</span></h1>
-                <p>Specialized on-ice and off-ice training protocols designed for competitive athletes seeking elite performance levels.</p>
+                <h1><?php echo $hero_title; ?></h1>
+                <p><?php echo htmlspecialchars($hero_subtitle); ?></p>
                 
                 <div class="hero-actions">
                     <a href="#programs" class="btn-primary">View Programs</a>
@@ -62,47 +138,27 @@
             </div>
 
             <div class="programs-grid">
-                
+                <?php foreach ($training_programs as $program): ?>
                 <div class="game-card">
-                    <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1580748141549-71748ddf0bdc?q=80&w=800');"></div>
+                    <div class="card-img" style="background-image: url('<?php echo htmlspecialchars($program['image_url']); ?>');"></div>
                     <div class="card-body">
-                        <h3>Player Dev</h3>
-                        <div class="tags"><span>Power Skating</span><span>Shooting</span></div>
-                        <p>Forwards & Defense: Explosive edgework and shot mechanics.</p>
+                        <h3><?php echo htmlspecialchars($program['title']); ?></h3>
+                        <div class="tags">
+                            <?php 
+                            $tags = explode(',', $program['tags']);
+                            foreach ($tags as $tag): 
+                            ?>
+                            <span><?php echo htmlspecialchars(trim($tag)); ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                        <p><?php echo htmlspecialchars($program['description']); ?></p>
                     </div>
                 </div>
-
-                <div class="game-card">
-                    <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1543326727-b5bf833b6c7a?q=80&w=800');"></div>
-                    <div class="card-body">
-                        <h3>Goalie Elite</h3>
-                        <div class="tags"><span>Positioning</span><span>Tracking</span></div>
-                        <p>Crease management, angle control, and rebound psychology.</p>
-                    </div>
-                </div>
-
-                <div class="game-card">
-                    <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800');"></div>
-                    <div class="card-body">
-                        <h3>Conditioning</h3>
-                        <div class="tags"><span>Strength</span><span>Power</span></div>
-                        <p>Dryland training for endurance and explosive 60-minute power.</p>
-                    </div>
-                </div>
-
-                <div class="game-card">
-                    <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=800');"></div>
-                    <div class="card-body">
-                        <h3>Nutrition</h3>
-                        <div class="tags"><span>Protein</span><span>Recovery</span></div>
-                        <p>Meal planning to fuel muscle growth and accelerate recovery.</p>
-                    </div>
-                </div>
-
+                <?php endforeach; ?>
             </div>
 
             <div class="library-footer">
-                <a href="register.php">
+                <a href="public_sessions.php">
                     View Full Schedule & Availability <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -147,7 +203,7 @@
         <div class="container footer-flex">
             <div class="footer-left">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                    <img src="https://images.crashmedia.ca/images/2026/01/18/logo.png" alt="Logo" style="height: 30px; opacity: 0.8;">
+                    <img src="<?php echo htmlspecialchars($logo_url); ?>" alt="Logo" style="height: 30px; opacity: 0.8;">
                     <div class="logo-text" style="font-size: 1.2rem;">CRASH<span>HOCKEY</span></div>
                 </div>
                 

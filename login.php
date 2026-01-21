@@ -1,10 +1,15 @@
 <?php
 session_start();
 require 'db_config.php';
+require 'security.php';
 
-// If already logged in, redirect to dashboard
+// Set security headers
+setSecurityHeaders();
+
+// If already logged in, redirect to dashboard or specified redirect
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    header("Location: dashboard.php");
+    $redirect = $_GET['redirect'] ?? 'dashboard.php';
+    header("Location: " . $redirect);
     exit();
 }
 
@@ -12,41 +17,61 @@ $error = "";
 $show_verify_link = false; // Flag to show the "Enter Code" button
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $pass  = $_POST['password'];
-    
-    // Fetch User
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
-    
-    // Verify Password
-    if ($user && password_verify($pass, $user['password'])) {
+    // Validate CSRF token
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "Invalid security token. Please try again.";
+    } 
+    // Check rate limiting
+    elseif (isRateLimited('login', 5, 300)) {
+        $error = "Too many login attempts. Please try again in 5 minutes.";
+        logSecurityEvent($pdo, 'rate_limit_exceeded', 'Login rate limit exceeded', null);
+    } 
+    else {
+        $email = trim($_POST['email']);
+        $pass  = $_POST['password'];
         
-        // 1. CHECK VERIFICATION STATUS
-        if ($user['is_verified'] == 0) {
-            $error = "Account pending verification.";
-            $show_verify_link = true; // Trigger the verification button
-        } else {
-            // 2. LOGIN SUCCESS - SET SESSION
-            $_SESSION['logged_in'] = true;
-            $_SESSION['user_id']   = $user['id'];
-            $_SESSION['user_role'] = $user['role'];
-            $_SESSION['user_name'] = $user['first_name'];
-            $_SESSION['user_email'] = $user['email']; // Useful for test emails
+        // Fetch User
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        // Verify Password
+        if ($user && password_verify($pass, $user['password'])) {
             
-            // 3. CHECK FORCE PASSWORD CHANGE (Coach-created accounts)
-            if (isset($user['force_pass_change']) && $user['force_pass_change'] == 1) {
-                header("Location: force_change_password.php");
+            // 1. CHECK VERIFICATION STATUS
+            if ($user['is_verified'] == 0) {
+                $error = "Account pending verification.";
+                $show_verify_link = true; // Trigger the verification button
+                logSecurityEvent($pdo, 'login_unverified', "Unverified login attempt for $email", null);
+            } else {
+                // 2. LOGIN SUCCESS - Regenerate session ID to prevent fixation
+                session_regenerate_id(true);
+                
+                // SET SESSION
+                $_SESSION['logged_in'] = true;
+                $_SESSION['user_id']   = $user['id'];
+                $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_name'] = $user['first_name'];
+                $_SESSION['user_email'] = $user['email']; // Useful for test emails
+                
+                // Log successful login
+                logSecurityEvent($pdo, 'login_success', "User logged in: $email", $user['id']);
+                
+                // 3. CHECK FORCE PASSWORD CHANGE (Coach-created accounts)
+                if (isset($user['force_pass_change']) && $user['force_pass_change'] == 1) {
+                    header("Location: force_change_password.php");
+                    exit();
+                }
+                
+                // 4. REDIRECT - check for redirect parameter or go to dashboard
+                $redirect = $_GET['redirect'] ?? 'dashboard.php';
+                header("Location: " . $redirect);
                 exit();
             }
-            
-            // 4. REDIRECT TO DASHBOARD
-            header("Location: dashboard.php");
-            exit();
+        } else {
+            $error = "Invalid email address or password.";
+            logSecurityEvent($pdo, 'login_failed', "Failed login attempt for $email", null);
         }
-    } else {
-        $error = "Invalid email address or password.";
     }
 }
 ?>
@@ -59,6 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     <link rel="icon" type="image/png" href="https://images.crashmedia.ca/images/2026/01/18/logo.png">
     
+    <link rel="stylesheet" href="css/theme-variables.php">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -216,6 +242,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php endif; ?>
 
             <form method="POST">
+                <?= csrfTokenInput() ?>
                 
                 <div class="input-box">
                     <label>Email Address</label>

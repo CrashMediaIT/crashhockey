@@ -12,11 +12,11 @@ class SmtpMailer {
     public function send($to, $subject, $body, $config) {
         // 1. CONFIGURATION & SANITIZATION
         // Remove 'ssl://' or 'tls://' if accidentally typed in Host field
-        $raw_host = $config['smtp_host'] ?? 'smtp.neo.space';
+        $raw_host = $config['smtp_host'] ?? '';
         $host     = preg_replace('/^ssl:\/\/|^tls:\/\//', '', trim($raw_host));
         
-        $port = $config['smtp_port'] ?? '465';
-        $enc  = $config['smtp_encryption'] ?? 'ssl'; 
+        $port = $config['smtp_port'] ?? '';
+        $enc  = $config['smtp_encryption'] ?? ''; 
         
         // Ensure strings to prevent PHP 8 Fatal Errors on null
         $user = trim((string)($config['smtp_user'] ?? ''));
@@ -59,7 +59,7 @@ class SmtpMailer {
 
         // 7. ENVELOPE
         $fromEmail = !empty($config['smtp_from_email']) ? $config['smtp_from_email'] : $user;
-        $fromName  = !empty($config['smtp_from_name'])  ? $config['smtp_from_name']  : 'Crash Hockey System';
+        $fromName  = !empty($config['smtp_from_name'])  ? $config['smtp_from_name']  : '';
 
         $this->sendCommand("MAIL FROM: <$user>"); // Neo often requires Envelope From to match Login
         $this->sendCommand("RCPT TO: <$to>");
@@ -221,9 +221,9 @@ function sendEmail($to, $type, $data) {
         $code = $data['code'] ?? '---';
         $body = "
         <div style='font-family: Arial, sans-serif; background: #06080b; color: #fff; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;'>
-            <h2 style='color: #ff4d00; margin-top: 0;'>Password Reset</h2>
+            <h2 style='color: #7000a4; margin-top: 0;'>Password Reset</h2>
             <p style='color:#ccc;'>Use this code to reset your password:</p>
-            <div style='background: #1e293b; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px; border: 1px solid #ff4d00;'>
+            <div style='background: #1e293b; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px; border: 1px solid #7000a4;'>
                 <span style='font-size: 28px; font-weight: 800; color: #fff;'>$code</span>
             </div>
             $footer
@@ -257,4 +257,5 @@ function sendEmail($to, $type, $data) {
         return false;
     }
 }
+
 ?>

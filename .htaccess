@@ -1,0 +1,113 @@
+# Apache Configuration for Crash Hockey
+# For users who prefer Apache over NGINX
+
+# Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Redirect to index.php for missing files/directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?$1 [L,QSA]
+</IfModule>
+
+# Large File Upload Settings
+# Note: These settings may be overridden by php.ini
+# Adjust in php.ini or .user.ini for guaranteed effect
+php_value upload_max_filesize 2048M
+php_value post_max_size 2048M
+php_value memory_limit 512M
+php_value max_execution_time 300
+php_value max_input_time 300
+
+# Security Headers (aligned with security.php)
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Content Security Policy
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self';"
+    
+    # HSTS for HTTPS (uncomment when using SSL)
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# Deny access to sensitive files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to environment and SQL files
+<FilesMatch "\.(env|sql|bak|backup|old|tmp)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to setup.php after initial setup
+# Uncomment after completing setup
+# <Files "setup.php">
+#     Order allow,deny
+#     Deny from all
+# </Files>
+
+# Enable Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    
+    # Fonts
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    
+    # Videos
+    ExpiresByType video/mp4 "access plus 30 days"
+    ExpiresByType video/webm "access plus 30 days"
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Prevent access to backup files
+<FilesMatch "\.(bak|backup|sql|old|tmp)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow range requests for video streaming
+<IfModule mod_headers.c>
+    <FilesMatch "\.(mp4|webm|ogg|avi|mov)$">
+        Header set Accept-Ranges bytes
+    </FilesMatch>
+</IfModule>
+
+# Error pages (optional - customize as needed)
+# ErrorDocument 404 /404.php
+# ErrorDocument 500 /500.php
+
+# Limit request body size (if mod_reqtimeout is available)
+<IfModule mod_reqtimeout.c>
+    RequestReadTimeout header=20-300,MinRate=500 body=20-300,MinRate=500
+</IfModule>
