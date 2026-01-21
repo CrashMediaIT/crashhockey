@@ -1499,3 +1499,19 @@ CREATE TABLE IF NOT EXISTS `training_programs` (
   FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Feature Versions (for intelligent feature import and migration tracking)
+CREATE TABLE IF NOT EXISTS `feature_versions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `feature_name` VARCHAR(255) NOT NULL,
+  `version` VARCHAR(50) NOT NULL,
+  `applied_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `applied_by` INT DEFAULT NULL,
+  `database_changes` JSON DEFAULT NULL COMMENT 'Tracks table/column renames and migrations',
+  `file_changes` JSON DEFAULT NULL COMMENT 'Tracks moved/renamed files',
+  `manifest` JSON DEFAULT NULL COMMENT 'Complete manifest of the feature version',
+  FOREIGN KEY (`applied_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  UNIQUE KEY `unique_feature_version` (`feature_name`, `version`),
+  INDEX `idx_feature_name` (`feature_name`),
+  INDEX `idx_applied_at` (`applied_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

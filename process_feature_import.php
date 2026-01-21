@@ -27,6 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         switch ($action) {
+            case 'get_installed_versions':
+                // Get list of installed feature versions
+                $importer = new FeatureImporter($pdo, __DIR__);
+                $versions = $importer->getInstalledVersions();
+                
+                echo json_encode([
+                    'success' => true,
+                    'versions' => $versions
+                ]);
+                break;
+                
             case 'import_feature':
                 // Check if file was uploaded
                 if (!isset($_FILES['feature_package']) || $_FILES['feature_package']['error'] !== UPLOAD_ERR_OK) {

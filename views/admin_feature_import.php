@@ -343,12 +343,20 @@ if ($user_role !== 'admin') {
     </div>
     
     <div class="info-banner">
-        <h3><i class="fas fa-info-circle"></i> About Feature Import</h3>
+        <h3><i class="fas fa-info-circle"></i> Intelligent Feature Import System</h3>
         <p>
-            Import packaged features as ZIP files containing a manifest, database migrations, and files.
-            The system will validate your environment, run migrations, and update files automatically.
-            All changes are backed up and can be rolled back if any error occurs.
+            Import packaged features with intelligent database schema migration support. The system automatically:
+            handles table/column renames, updates code references, validates version compatibility, tracks migration history,
+            and provides rollback on errors. All changes are backed up before execution.
         </p>
+    </div>
+    
+    <!-- Installed Versions -->
+    <div class="manifest-example" id="installedVersions" style="display: none;">
+        <h3><i class="fas fa-history"></i> Installed Feature Versions</h3>
+        <div id="versionsContainer" style="max-height: 200px; overflow-y: auto;">
+            <p style="text-align: center; color: var(--text-light);">Loading...</p>
+        </div>
     </div>
     
     <!-- Upload Section -->
@@ -397,34 +405,105 @@ if ($user_role !== 'admin') {
     
     <!-- Manifest Example -->
     <div class="manifest-example">
-        <h3><i class="fas fa-code"></i> Example Manifest Format</h3>
+        <h3><i class="fas fa-code"></i> Enhanced Manifest Format</h3>
         <pre>{
   "name": "Feature Name",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "requires_version": "1.0.0",
   "requires_validation": true,
-  "database_migrations": ["migration_001.sql"],
+  "database_migrations": [
+    {
+      "type": "rename_table",
+      "old_name": "old_table",
+      "new_name": "new_table"
+    },
+    {
+      "type": "rename_column",
+      "table": "users",
+      "old_name": "old_col",
+      "new_name": "new_col"
+    },
+    {
+      "type": "add_column",
+      "table": "users",
+      "column_definition": "new_col VARCHAR(255) DEFAULT NULL"
+    }
+  ],
+  "file_migrations": [
+    {
+      "type": "move",
+      "old_path": "views/old.php",
+      "new_path": "views/new.php"
+    }
+  ],
   "files": {
     "create": ["views/new_view.php"],
-    "update": ["dashboard.php"],
-    "delete": ["old_file.php"]
+    "update": ["dashboard.php"]
   },
-  "directories": ["uploads/new_folder/"],
-  "navigation": {
-    "add": [
-      {
-        "label": "New Item",
-        "url": "?page=new",
-        "view": "views/new_view.php",
-        "role": "admin"
-      }
-    ]
-  }
+  "directories": ["uploads/new_folder/"]
 }</pre>
     </div>
 </div>
 
 <script>
 let selectedFile = null;
+
+// Load installed versions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadInstalledVersions();
+});
+
+// Load installed feature versions
+async function loadInstalledVersions() {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'get_installed_versions');
+        formData.append('csrf_token', '<?= generateCsrfToken() ?>');
+        
+        const response = await fetch('process_feature_import.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.versions && data.versions.length > 0) {
+            const container = document.getElementById('versionsContainer');
+            const versionsSection = document.getElementById('installedVersions');
+            
+            // Group versions by feature
+            const grouped = {};
+            data.versions.forEach(v => {
+                if (!grouped[v.feature_name]) {
+                    grouped[v.feature_name] = [];
+                }
+                grouped[v.feature_name].push(v);
+            });
+            
+            let html = '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+            html += '<tr style="border-bottom: 1px solid var(--border); color: var(--text-light);">';
+            html += '<th style="padding: 8px; text-align: left;">Feature</th>';
+            html += '<th style="padding: 8px; text-align: left;">Version</th>';
+            html += '<th style="padding: 8px; text-align: left;">Installed</th>';
+            html += '</tr>';
+            
+            for (const [feature, versions] of Object.entries(grouped)) {
+                const latest = versions[0];
+                html += '<tr style="border-bottom: 1px solid var(--border);">';
+                html += `<td style="padding: 8px; color: #fff;">${feature}</td>`;
+                html += `<td style="padding: 8px; color: var(--success);">${latest.version}</td>`;
+                html += `<td style="padding: 8px; color: var(--text-light);">${new Date(latest.applied_at).toLocaleDateString()}</td>`;
+                html += '</tr>';
+            }
+            
+            html += '</table>';
+            container.innerHTML = html;
+            versionsSection.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading versions:', error);
+    }
+}
 
 // Drag and drop
 const uploadSection = document.getElementById('uploadSection');
@@ -530,6 +609,9 @@ async function startImport() {
                 <p>${data.message || 'Feature imported successfully'}</p>
                 ${data.backup_id ? '<p style="font-size: 12px; margin-top: 10px;">Backup ID: ' + data.backup_id + '</p>' : ''}
             `;
+            
+            // Reload installed versions
+            loadInstalledVersions();
             
             // Reset after success
             setTimeout(() => {
