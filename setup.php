@@ -814,7 +814,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                     // Phase 3 Features
                     'reports', 'report_schedules', 'security_scans', 'database_maintenance_logs',
                     // Phase 4 Features
-                    'cron_jobs', 'backup_jobs', 'backup_history'
+                    'cron_jobs', 'backup_jobs', 'backup_history',
+                    // Theme & Branding
+                    'theme_settings', 'training_programs'
                 ];
                 
                 $existing_tables = [];

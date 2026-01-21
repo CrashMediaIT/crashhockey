@@ -1478,9 +1478,24 @@ CREATE TABLE IF NOT EXISTS `system_notifications` (
 CREATE TABLE IF NOT EXISTS `theme_settings` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `setting_name` VARCHAR(50) NOT NULL UNIQUE,
-  `setting_value` VARCHAR(7) NOT NULL COMMENT 'Hex color code',
+  `setting_value` TEXT NOT NULL COMMENT 'Hex color code or text value',
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `updated_by` INT DEFAULT NULL,
   FOREIGN KEY (`updated_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_setting_name` (`setting_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Training Programs Table
+CREATE TABLE IF NOT EXISTS `training_programs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT NOT NULL,
+  `tags` VARCHAR(500) DEFAULT NULL COMMENT 'Comma-separated tags',
+  `image_url` VARCHAR(500) DEFAULT NULL,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_by` INT DEFAULT NULL,
+  FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

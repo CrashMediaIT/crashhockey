@@ -22,6 +22,18 @@ $isAdmin   = ($user_role === 'admin');
 $isCoach   = ($user_role === 'coach' || $user_role === 'coach_plus');
 $isParent  = ($user_role === 'parent');
 
+// Get logo URL from theme settings
+$logo_url = 'https://images.crashmedia.ca/images/2026/01/18/logo.png'; // fallback
+try {
+    $stmt = $pdo->query("SELECT setting_value FROM theme_settings WHERE setting_name = 'logo_url'");
+    $logo_result = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($logo_result && !empty($logo_result['setting_value'])) {
+        $logo_url = $logo_result['setting_value'];
+    }
+} catch (Exception $e) {
+    // Use fallback logo
+}
+
 $page = $_GET['page'] ?? 'home';
 
 // FULL ROUTING TABLE
@@ -190,7 +202,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
 
 <aside class="sidebar">
     <a href="?page=home" class="brand">
-        <img src="https://images.crashmedia.ca/images/2026/01/18/logo.png" alt="Logo">
+        <img src="<?= htmlspecialchars($logo_url) ?>" alt="Logo">
         CRASH <span>HOCKEY</span>
     </a>
     
