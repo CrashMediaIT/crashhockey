@@ -39,7 +39,7 @@ $recent_expenses = $pdo->query("
             if ($_GET['status'] === 'success') {
                 echo 'Expense saved successfully!';
             } else {
-                echo $_GET['message'] ?? 'An error occurred.';
+                echo htmlspecialchars($_GET['message'] ?? 'An error occurred.', ENT_QUOTES, 'UTF-8');
             }
             ?>
         </div>

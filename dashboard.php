@@ -55,6 +55,7 @@ $allowed_pages = [
     'ihs_import'          => 'views/ihs_import.php',
     'notifications'       => 'views/notifications.php',
     'athletes'            => 'views/athletes.php',
+    'athlete_detail'      => 'views/athlete_detail.php',
     'create_session'      => 'views/create_session.php',
     'session_templates'   => 'views/library_sessions.php',
     'session_detail'      => 'views/session_detail.php',
@@ -94,7 +95,9 @@ $allowed_pages = [
     'admin_theme_settings' => 'views/admin_theme_settings.php',
     'reports'             => 'views/reports.php',
     'report_view'         => 'views/report_view.php',
-    'scheduled_reports'   => 'views/scheduled_reports.php'
+    'scheduled_reports'   => 'views/scheduled_reports.php',
+    'user_permissions'    => 'views/user_permissions.php',
+    'testing'             => 'views/testing.php'
 ];
 
 $view_file = $allowed_pages[$page] ?? 'views/home.php';
