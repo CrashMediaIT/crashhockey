@@ -27,29 +27,44 @@ $isTeamStaff   = ($isTeamCoach);
 
 $page = $_GET['page'] ?? 'home';
 
-// FULL ROUTING TABLE
+// FULL ROUTING TABLE - PARENT AND CHILD PAGES
 $allowed_pages = [
     // Main Menu
     'home'                    => 'views/home.php',
     'stats'                   => 'views/stats.php',
-    'upcoming_sessions'       => 'views/sessions_upcoming.php',
-    'booking'                 => 'views/sessions_booking.php',
-    'drill_review'            => 'views/video_drill_review.php',
-    'coaches_reviews'         => 'views/video_coach_reviews.php',
-    'strength_conditioning'   => 'views/health_workouts.php',
-    'nutrition'               => 'views/health_nutrition.php',
+    
+    // Sessions - Parent page with tabs
+    'sessions'                => 'views/sessions.php',
+    'upcoming_sessions'       => 'views/sessions.php',
+    'booking'                 => 'views/sessions.php',
+    
+    // Video - Parent page with tabs
+    'video'                   => 'views/video.php',
+    'drill_review'            => 'views/video.php',
+    'coaches_reviews'         => 'views/video.php',
+    
+    // Health - Parent page with tabs
+    'health'                  => 'views/health.php',
+    'strength_conditioning'   => 'views/health.php',
+    'nutrition'               => 'views/health.php',
     
     // Team (Team Coaches)
     'team_roster'             => 'views/team_roster.php',
     
-    // Coaches Corner
-    'drill_library'           => 'views/drills_library.php',
-    'create_drill'            => 'views/drills_create.php',
-    'import_drill'            => 'views/drills_import.php',
-    'practice_library'        => 'views/practice_library.php',
-    'create_practice'         => 'views/practice_create.php',
+    // Coaches Corner - Parent pages with tabs
+    'drills'                  => 'views/drills.php',
+    'drill_library'           => 'views/drills.php',
+    'create_drill'            => 'views/drills.php',
+    'import_drill'            => 'views/drills.php',
+    
+    'practice'                => 'views/practice.php',
+    'practice_library'        => 'views/practice.php',
+    'create_practice'         => 'views/practice.php',
+    
     'roster'                  => 'views/coach_roster.php',
-    'mileage'                 => 'views/travel_mileage.php',
+    
+    'travel'                  => 'views/travel.php',
+    'mileage'                 => 'views/travel.php',
     
     // Accounting and Reports (Admin)
     'accounting_dashboard'    => 'views/accounting_dashboard.php',
@@ -117,15 +132,47 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         .nav-link i { width: 18px; text-align: center; }
         .nav-link:hover, .nav-link.active { background: rgba(107, 70, 193, 0.1); color: var(--primary-light); }
         
-        /* Collapsible Submenus */
-        .nav-parent { display: flex; align-items: center; gap: 14px; padding: 10px 15px; color: var(--text); border-radius: 8px; font-size: 13px; font-weight: 600; transition: 0.2s; margin-bottom: 2px; cursor: pointer; justify-content: space-between; }
-        .nav-parent:hover { background: rgba(107, 70, 193, 0.1); color: var(--primary-light); }
-        .nav-parent i.icon { width: 18px; text-align: center; }
-        .nav-parent i.chevron { font-size: 10px; transition: transform 0.2s; }
-        .nav-parent.expanded i.chevron { transform: rotate(90deg); }
-        .nav-submenu { list-style: none; padding: 0; margin: 0 0 0 32px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-        .nav-submenu.expanded { max-height: 500px; }
-        .nav-submenu .nav-link { font-size: 12px; padding: 8px 15px; }
+        /* TAB NAVIGATION FOR PARENT PAGES */
+        .tab-navigation {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 30px;
+            padding-bottom: 0;
+        }
+        .tab-link {
+            padding: 12px 24px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .tab-link:hover {
+            color: var(--primary-light);
+            background: rgba(107, 70, 193, 0.05);
+        }
+        .tab-link.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        /* Page Headers */
+        .page-header {
+            margin-bottom: 30px;
+        }
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+        .page-header p {
+            color: var(--text);
+            font-size: 14px;
+        }
         
         /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -134,8 +181,219 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         .top-bar { display: flex; justify-content: flex-end; padding: 20px 40px; border-bottom: 1px solid var(--border); background: var(--sidebar); }
         .athlete-selector { display: flex; align-items: center; gap: 10px; }
         .athlete-selector label { font-size: 13px; color: var(--text); font-weight: 600; }
-        .athlete-selector select { padding: 8px 15px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
-        .athlete-selector select:focus { outline: none; border-color: var(--primary); }
+        
+        /* MODERN SELECT STYLING */
+        .athlete-selector select, select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding: 12px 45px 12px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%236B46C1%22%20d%3D%22M7%2010l5%205%205-5z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            min-height: 45px;
+        }
+        .athlete-selector select:hover, select:hover { 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+        }
+        .athlete-selector select:focus, select:focus { 
+            outline: none; 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+            background-color: var(--bg-secondary);
+        }
+        
+        /* MODERN INPUT & TEXTAREA STYLING */
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="number"],
+        input[type="date"],
+        input[type="time"],
+        input[type="tel"],
+        input[type="url"],
+        textarea {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 12px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 400;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            min-height: 45px;
+            width: 100%;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        input[type="text"]:hover,
+        input[type="email"]:hover,
+        input[type="password"]:hover,
+        input[type="number"]:hover,
+        input[type="date"]:hover,
+        input[type="time"]:hover,
+        input[type="tel"]:hover,
+        input[type="url"]:hover,
+        textarea:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        input[type="time"]:focus,
+        input[type="tel"]:focus,
+        input[type="url"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+            background-color: var(--bg-secondary);
+        }
+        input::placeholder,
+        textarea::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        /* MODERN CHECKBOX & RADIO STYLING */
+        input[type="checkbox"],
+        input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            background: var(--bg);
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        input[type="radio"] {
+            border-radius: 50%;
+        }
+        input[type="checkbox"]:hover,
+        input[type="radio"]:hover {
+            border-color: var(--primary);
+        }
+        input[type="checkbox"]:checked,
+        input[type="radio"]:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        input[type="radio"]:checked::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* MODERN BUTTON STYLING */
+        button,
+        input[type="submit"],
+        input[type="button"],
+        .btn {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 12px 24px;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 45px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button:hover,
+        input[type="submit"]:hover,
+        input[type="button"]:hover,
+        .btn:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(107, 70, 193, 0.3);
+            transform: translateY(-1px);
+        }
+        button:active,
+        input[type="submit"]:active,
+        input[type="button"]:active,
+        .btn:active {
+            transform: translateY(0);
+        }
+        button:disabled,
+        input[type="submit"]:disabled,
+        input[type="button"]:disabled,
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Button Variants */
+        .btn-secondary {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            box-shadow: none;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
         
         /* Content Area */
         .content-area { flex: 1; padding: 40px; overflow-y: auto; }
@@ -170,43 +428,15 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
             <a href="?page=stats" class="nav-link <?= $page=='stats'?'active':'' ?>">
                 <i class="fa-solid fa-chart-line icon"></i> Performance Stats
             </a>
-            
-            <!-- Sessions Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-calendar-check icon"></i> Sessions</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=upcoming_sessions" class="nav-link <?= $page=='upcoming_sessions'?'active':'' ?>">Upcoming Sessions</a></li>
-                <li><a href="?page=booking" class="nav-link <?= $page=='booking'?'active':'' ?>">Booking</a></li>
-            </ul>
-            
-            <!-- Video Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-video icon"></i> Video</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=drill_review" class="nav-link <?= $page=='drill_review'?'active':'' ?>">Drill Review</a></li>
-                <li>
-                    <a href="?page=coaches_reviews" class="nav-link <?= $page=='coaches_reviews'?'active':'' ?>">
-                        Coaches Reviews 
-                        <?php if($isAnyCoach): ?>
-                        <span style="margin-left:auto; font-size:11px; color:var(--primary);">[Upload]</span>
-                        <?php endif; ?>
-                    </a>
-                </li>
-            </ul>
-            
-            <!-- Health Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-heart-pulse icon"></i> Health</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=strength_conditioning" class="nav-link <?= $page=='strength_conditioning'?'active':'' ?>">Strength & Conditioning</a></li>
-                <li><a href="?page=nutrition" class="nav-link <?= $page=='nutrition'?'active':'' ?>">Nutrition</a></li>
-            </ul>
+            <a href="?page=sessions" class="nav-link <?= in_array($page, ['sessions','upcoming_sessions','booking'])?'active':'' ?>">
+                <i class="fa-solid fa-calendar-check icon"></i> Sessions
+            </a>
+            <a href="?page=video" class="nav-link <?= in_array($page, ['video','drill_review','coaches_reviews'])?'active':'' ?>">
+                <i class="fa-solid fa-video icon"></i> Video
+            </a>
+            <a href="?page=health" class="nav-link <?= in_array($page, ['health','strength_conditioning','nutrition'])?'active':'' ?>">
+                <i class="fa-solid fa-heart-pulse icon"></i> Health
+            </a>
         </nav>
     </div>
 
@@ -227,39 +457,18 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
     <div class="nav-group">
         <span class="nav-label">Coaches Corner</span>
         <nav class="nav-menu">
-            <!-- Drills Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-clipboard-list icon"></i> Drills</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=drill_library" class="nav-link <?= $page=='drill_library'?'active':'' ?>">Library</a></li>
-                <li><a href="?page=create_drill" class="nav-link <?= $page=='create_drill'?'active':'' ?>">Create a Drill</a></li>
-                <li><a href="?page=import_drill" class="nav-link <?= $page=='import_drill'?'active':'' ?>">Import a Drill</a></li>
-            </ul>
-            
-            <!-- Practice Plans Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-file-lines icon"></i> Practice Plans</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=practice_library" class="nav-link <?= $page=='practice_library'?'active':'' ?>">Library</a></li>
-                <li><a href="?page=create_practice" class="nav-link <?= $page=='create_practice'?'active':'' ?>">Create a Practice</a></li>
-            </ul>
-            
+            <a href="?page=drills" class="nav-link <?= in_array($page, ['drills','drill_library','create_drill','import_drill'])?'active':'' ?>">
+                <i class="fa-solid fa-clipboard-list icon"></i> Drills
+            </a>
+            <a href="?page=practice" class="nav-link <?= in_array($page, ['practice','practice_library','create_practice'])?'active':'' ?>">
+                <i class="fa-solid fa-file-lines icon"></i> Practice Plans
+            </a>
             <a href="?page=roster" class="nav-link <?= $page=='roster'?'active':'' ?>">
                 <i class="fa-solid fa-users-gear icon"></i> Roster
             </a>
-            
-            <!-- Travel Submenu -->
-            <div class="nav-parent" onclick="toggleSubmenu(this)">
-                <span><i class="fa-solid fa-plane icon"></i> Travel</span>
-                <i class="fa-solid fa-chevron-right chevron"></i>
-            </div>
-            <ul class="nav-submenu">
-                <li><a href="?page=mileage" class="nav-link <?= $page=='mileage'?'active':'' ?>">Mileage</a></li>
-            </ul>
+            <a href="?page=travel" class="nav-link <?= in_array($page, ['travel','mileage'])?'active':'' ?>">
+                <i class="fa-solid fa-plane icon"></i> Travel
+            </a>
         </nav>
     </div>
     <?php endif; ?>
