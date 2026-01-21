@@ -769,10 +769,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                 $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Define ALL tables from schema.sql that MUST exist (76 total including Phase 4)
+                // Define ALL tables from schema.sql that MUST exist (78 total including Phase 4)
                 $all_tables = [
                     // Core tables
                     'users', 'locations', 'age_groups', 'skill_levels', 'managed_athletes',
+                    // Audit & System tables
+                    'audit_logs', 'system_notifications',
                     // Session & Booking tables
                     'session_types', 'sessions', 'session_templates', 'bookings', 'discount_codes',
                     // Practice Plan tables
