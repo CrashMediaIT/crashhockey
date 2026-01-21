@@ -78,12 +78,17 @@ try {
         
         // Log the change
         $audit_stmt = $pdo->prepare("
-            INSERT INTO audit_log (user_id, action, table_name, description)
-            VALUES (?, 'update', 'theme_settings', ?)
+            INSERT INTO audit_logs (user_id, action_type, table_name, record_id, new_values, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $audit_stmt->execute([
             $user_id,
-            'Updated theme color settings'
+            'UPDATE',
+            'theme_settings',
+            0, // Multiple records
+            json_encode($colors),
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
         
         $pdo->commit();
@@ -127,12 +132,17 @@ try {
         
         // Log the reset
         $audit_stmt = $pdo->prepare("
-            INSERT INTO audit_log (user_id, action, table_name, description)
-            VALUES (?, 'update', 'theme_settings', ?)
+            INSERT INTO audit_logs (user_id, action_type, table_name, record_id, new_values, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $audit_stmt->execute([
             $user_id,
-            'Reset theme to default colors'
+            'UPDATE',
+            'theme_settings',
+            0, // Multiple records
+            json_encode($defaults),
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
         ]);
         
         $pdo->commit();
