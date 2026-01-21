@@ -6,6 +6,9 @@
  * - Should only be run once during initial setup
  */
 
+// Start session for multi-step wizard
+session_start();
+
 // Prevent re-running if already configured
 $config_file = __DIR__ . '/crashhockey.env';
 $lock_file = __DIR__ . '/.setup_complete';
@@ -366,7 +369,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 3) {
                         
                         if ($test_result) {
                             $smtp_tested = true;
-                            $step = 4; // Move to admin creation
+                            // Don't auto-advance - show continue button instead
+                            // $step remains 3 to show success message and continue button
                         } else {
                             // Fetch the actual error message from email_logs
                             $stmt = $pdo->prepare("SELECT error_message FROM email_logs WHERE recipient = ? AND status = 'FAILED' ORDER BY sent_at DESC LIMIT 1");
@@ -685,10 +689,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             <?php endif; ?>
             
             <?php if ($smtp_tested): ?>
-                <div class="alert alert-success">
+                <div class="alert alert-success" style="margin-bottom: 20px;">
                     <i class="fas fa-check-circle"></i>
-                    SMTP configuration successful! Test email sent.
+                    <strong>SUCCESS!</strong> SMTP configuration saved and test email sent successfully.
                 </div>
+                
+                <form method="POST">
+                    <input type="hidden" name="step" value="4">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-arrow-right"></i> Continue to Admin Account Creation
+                    </button>
+                </form>
             <?php endif; ?>
 
             <?php if ($step == 1): ?>
@@ -942,7 +953,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
                         </button>
                     </form>
                 <?php endif; ?>
-            <?php elseif ($step == 3): ?>
+            <?php elseif ($step == 3 && !$smtp_tested): ?>
                 <h2>SMTP Configuration</h2>
                 <p style="color: #94a3b8; margin-bottom: 20px; line-height: 1.6;">
                     Configure email settings to enable verification emails and notifications.
