@@ -149,22 +149,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .setup-container { max-width: 600px; width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 40px; }
         .logo { text-align: center; margin-bottom: 30px; }
         .logo h1 { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
-        .logo h1 span { color: var(--neon); }
+        .logo h1 span { color: var(--primary); }
         .progress-bar { display: flex; gap: 10px; margin-bottom: 40px; }
         .progress-step { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
-        .progress-step.active { background: var(--neon); }
+        .progress-step.active { background: var(--primary); }
         h2 { font-size: 22px; margin-bottom: 10px; }
         p { color: #94a3b8; margin-bottom: 30px; font-size: 14px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #cbd5e1; }
         .form-group input, .form-group select { width: 100%; height: 45px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 15px; color: #fff; font-size: 14px; font-family: 'Inter', sans-serif; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--neon); }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
         .btn-primary { width: 100%; height: 45px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
         .btn-primary:hover { background: var(--primary-hover); }
         .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
         .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; }
         .alert-success { background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; color: #00ff88; }
-        .step-info { background: rgba(255, 77, 0, 0.05); border-left: 3px solid var(--neon); padding: 15px; margin-bottom: 20px; font-size: 13px; color: #94a3b8; }
+        .step-info { background: rgba(107, 70, 193, 0.05); border-left: 3px solid var(--primary); padding: 15px; margin-bottom: 20px; font-size: 13px; color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -286,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <?php if ($step > 1): ?>
             <div style="text-align: center; margin-top: 20px;">
-                <a href="setup.php?step=<?= $step - 1 ?>" style="color: var(--neon); text-decoration: none; font-size: 13px;">
+                <a href="setup.php?step=<?= $step - 1 ?>" style="color: var(--primary); text-decoration: none; font-size: 13px;">
                     <i class="fa-solid fa-arrow-left"></i> Back to Previous Step
                 </a>
             </div>

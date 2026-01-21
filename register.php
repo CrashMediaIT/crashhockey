@@ -31,7 +31,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         /* LEFT SIDE: HERO / BRANDING */
         .split-left {
             flex: 1.2;
-            background: linear-gradient(135deg, rgba(255, 77, 0, 0.1), rgba(6, 8, 11, 0.9)), url('https://images.unsplash.com/photo-1515703403366-26c9d3cf48b6?q=80&w=2574&auto=format&fit=crop'); 
+            background: linear-gradient(135deg, rgba(107, 70, 193, 0.1), rgba(6, 8, 11, 0.9)), url('https://images.unsplash.com/photo-1515703403366-26c9d3cf48b6?q=80&w=2574&auto=format&fit=crop'); 
             background-size: cover;
             background-position: center;
             display: flex;
@@ -100,7 +100,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         
         .input-box:focus-within {
             border-color: var(--neon);
-            box-shadow: 0 0 0 2px rgba(255, 77, 0, 0.1);
+            box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.1);
         }
 
         .input-box label {

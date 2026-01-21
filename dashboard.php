@@ -276,7 +276,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
                 <i class="fa-solid fa-file-invoice-dollar icon"></i> Billing Dashboard
             </a>
             <a href="?page=reports" class="nav-link <?= $page=='reports'?'active':'' ?>">
-                <i class="fa-solid fa-file-chart-column icon"></i> Reports
+                <i class="fa-solid fa-chart-bar icon"></i> Reports
             </a>
             <a href="?page=schedules" class="nav-link <?= $page=='schedules'?'active':'' ?>">
                 <i class="fa-solid fa-calendar-days icon"></i> Schedules
