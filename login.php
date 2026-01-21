@@ -75,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         /* LEFT SIDE: HERO / BRANDING */
         .split-left {
             flex: 1.2;
-            background: linear-gradient(135deg, rgba(255, 77, 0, 0.1), rgba(6, 8, 11, 0.9)), url('https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?q=80&w=2574&auto=format&fit=crop'); 
+            background: linear-gradient(135deg, rgba(107, 70, 193, 0.1), rgba(6, 8, 11, 0.9)), url('https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?q=80&w=2574&auto=format&fit=crop'); 
             background-size: cover;
             background-position: center;
             display: flex;
@@ -143,7 +143,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         .input-box:focus-within {
             border-color: var(--neon);
-            box-shadow: 0 0 0 2px rgba(255, 77, 0, 0.1);
+            box-shadow: 0 0 0 2px rgba(107, 70, 193, 0.1);
         }
 
         .input-box label {
@@ -200,7 +200,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php endif; ?>
 
             <?php if($show_verify_link): ?>
-                <div style="background: rgba(255, 77, 0, 0.1); border: 1px solid var(--neon); color: var(--neon); padding: 20px; border-radius: 6px; font-size: 13px; margin-bottom: 25px; text-align: center;">
+                <div style="background: rgba(107, 70, 193, 0.1); border: 1px solid var(--neon); color: var(--neon); padding: 20px; border-radius: 6px; font-size: 13px; margin-bottom: 25px; text-align: center;">
                     <i class="fa-solid fa-lock" style="font-size: 20px; margin-bottom: 10px; display: block;"></i>
                     <strong style="font-size: 14px; display: block; margin-bottom: 5px;">Account Not Verified</strong>
                     <span style="color: rgba(255,255,255,0.7);">We sent a code to your email.</span>

@@ -221,9 +221,9 @@ function sendEmail($to, $type, $data) {
         $code = $data['code'] ?? '---';
         $body = "
         <div style='font-family: Arial, sans-serif; background: #06080b; color: #fff; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto;'>
-            <h2 style='color: #ff4d00; margin-top: 0;'>Password Reset</h2>
+            <h2 style='color: #6B46C1; margin-top: 0;'>Password Reset</h2>
             <p style='color:#ccc;'>Use this code to reset your password:</p>
-            <div style='background: #1e293b; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px; border: 1px solid #ff4d00;'>
+            <div style='background: #1e293b; padding: 20px; text-align: center; margin: 20px 0; border-radius: 6px; border: 1px solid #6B46C1;'>
                 <span style='font-size: 28px; font-weight: 800; color: #fff;'>$code</span>
             </div>
             $footer

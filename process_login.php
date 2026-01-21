@@ -1,70 +1,90 @@
 <?php
-// ENABLE DEBUGGING
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
+// Production Login Handler
 session_start();
-require 'db_config.php';
+require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/error_logger.php';
 
-echo "<h2>Login Debugger</h2>";
+// Check database connection
+if (!$db_connected || $pdo === null) {
+    ErrorLogger::error("Database connection failed during login", ['error' => $db_error ?? 'Unknown']);
+    $_SESSION['login_error'] = "Database connection error. Please contact support.";
+    header("Location: login.php");
+    exit();
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    echo "Attempting login for: <strong>$email</strong><br>";
-
+    // Validation
     if (empty($email) || empty($password)) {
-        die("Error: Email or Password was empty.");
+        $_SESSION['login_error'] = "Please enter both email and password.";
+        header("Location: login.php");
+        exit();
     }
 
     try {
-        // 1. Verify Database Selection
-        // This checks if we are actually connected to 'crash_hockey'
-        $stmt = $pdo->query("SELECT DATABASE()");
-        $current_db = $stmt->fetchColumn();
-        echo "Connected to database: <strong>$current_db</strong><br>";
-
-        if ($current_db != 'crash_hockey') {
-            die("<span style='color:red'>CRITICAL ERROR: Connected to '$current_db' but expected 'crash_hockey'. Check your .env file.</span>");
-        }
-
-        // 2. Attempt the Query
-        echo "Querying 'users' table...<br>";
-        $sql = "SELECT id, first_name, last_name, password, role FROM users WHERE email = ? LIMIT 1";
+        // Query user
+        $sql = "SELECT id, first_name, last_name, password, role, active FROM users WHERE email = ? LIMIT 1";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
         if ($user) {
-            echo "User found! Verifying password hash...<br>";
+            // Check if account is active
+            if (isset($user['active']) && $user['active'] == 0) {
+                $_SESSION['login_error'] = "Your account has been deactivated. Please contact support.";
+                ErrorLogger::security("Login attempt for deactivated account", ['email' => $email]);
+                header("Location: login.php");
+                exit();
+            }
+
+            // Verify password
             if (password_verify($password, $user['password'])) {
-                echo "<span style='color:green'>SUCCESS: Password matches. Redirecting...</span>";
-                
-                // Actual Login Logic
+                // Successful login
                 session_regenerate_id(true);
                 $_SESSION['user_id']   = $user['id'];
                 $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['logged_in'] = true;
-                
+
+                // Log successful login
+                ErrorLogger::security("Successful login", [
+                    'user_id' => $user['id'],
+                    'email' => $email,
+                    'role' => $user['role']
+                ]);
+
+                // Redirect to dashboard
                 header("Location: dashboard.php");
                 exit();
             } else {
-                echo "<span style='color:red'>FAILURE: Password did not match hash.</span><br>";
-                echo "Hash in DB starts with: " . substr($user['password'], 0, 10) . "...";
+                // Invalid password
+                $_SESSION['login_error'] = "Invalid email or password.";
+                ErrorLogger::security("Failed login attempt - invalid password", ['email' => $email]);
+                header("Location: login.php");
+                exit();
             }
         } else {
-            echo "<span style='color:orange'>FAILURE: No user found with that email.</span>";
+            // User not found
+            $_SESSION['login_error'] = "Invalid email or password.";
+            ErrorLogger::security("Failed login attempt - user not found", ['email' => $email]);
+            header("Location: login.php");
+            exit();
         }
 
-    } catch (Exception $e) {
-        // THIS IS THE REAL ERROR MESSAGE YOU NEED
-        echo "<hr><h3 style='color:red'>FATAL DATABASE ERROR:</h3>";
-        echo "<strong>" . $e->getMessage() . "</strong>";
-        echo "<hr>";
+    } catch (PDOException $e) {
+        ErrorLogger::error("Database error during login", [
+            'error' => $e->getMessage(),
+            'email' => $email
+        ]);
+        $_SESSION['login_error'] = "An error occurred. Please try again later.";
+        header("Location: login.php");
         exit();
     }
+} else {
+    // Not a POST request
+    header("Location: login.php");
+    exit();
 }
 ?>
