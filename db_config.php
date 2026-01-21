@@ -53,8 +53,11 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $db_connected = true;
 } catch (PDOException $e) {
-    // If connection fails, show a clear error
-    die("Database Connection Failed. <br>Checked Env: " . ($env_loaded ? "Yes" : "No") . "<br>Error: " . $e->getMessage());
+    // If connection fails, set flag and continue (for index fallback)
+    $db_connected = false;
+    $db_error = $e->getMessage();
+    $pdo = null;
 }
 ?>
