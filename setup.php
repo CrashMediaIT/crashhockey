@@ -678,6 +678,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             background: #5a0080;
             transform: translateY(-2px);
         }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -704,17 +714,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step == 4) {
             <?php endif; ?>
             
             <?php if ($smtp_tested): ?>
-                <div class="alert alert-success" style="margin-bottom: 20px;">
+                <div class="alert alert-success" id="smtp-success" style="margin-bottom: 20px; animation: slideDown 0.5s ease-out;">
                     <i class="fas fa-check-circle"></i>
                     <strong>SUCCESS!</strong> SMTP configuration saved and test email sent successfully.
                 </div>
                 
-                <form method="POST">
+                <form method="POST" style="animation: slideDown 0.5s ease-out 0.3s both;">
                     <input type="hidden" name="step" value="4">
                     <button type="submit" class="btn">
                         <i class="fas fa-arrow-right"></i> Continue to Admin Account Creation
                     </button>
                 </form>
+                
+                <script>
+                // Scroll to success message smoothly
+                document.getElementById('smtp-success').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                </script>
             <?php endif; ?>
 
             <?php if ($step == 1): ?>
