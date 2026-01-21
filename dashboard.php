@@ -414,6 +414,7 @@ $view_file = $allowed_pages[$page] ?? 'views/home.php';
         .sidebar::-webkit-scrollbar-thumb:hover, .content-area::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
         * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
     </style>
+    <link rel="stylesheet" href="views/shared_styles.css">
 </head>
 <body>
 
@@ -642,6 +643,9 @@ function switchAthlete(athleteId) {
     }
 }
 </script>
+
+<!-- Main Application JavaScript -->
+<script src="js/app.js"></script>
 
 </body>
 </html>
